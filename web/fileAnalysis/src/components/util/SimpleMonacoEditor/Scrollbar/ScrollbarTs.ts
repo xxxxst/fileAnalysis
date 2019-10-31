@@ -6,8 +6,8 @@ import Component from "vue-class-component";
 export class ScrollbarMd {
 	isVertical = true;
 	position = 0;
-	contentSize = 100;
-	count = 100;
+	contentSize = 0;
+	count = 0;
 	// size = 14;
 	isMouseOver = false;
 	onChanging:Function = null;
@@ -68,7 +68,7 @@ export default class Scrollbar extends Vue {
 	onModelChanged() {
 		var md = this.model;
 		// this.position = md.position;
-		// console.info("aaa");
+		// console.info("aaa", md.contentSize, md.count);
 		if(md.isVertical) {
 			// this.rootStyle.width = md.size + "px";
 			// this.rootStyle.height = "100%";
@@ -88,15 +88,20 @@ export default class Scrollbar extends Vue {
 
 	calcContentSize() {
 		var md = this.model;
-		if(md.contentSize >= md.count) {
+		if(md.contentSize >= 100) {
 			return "0";
 		}
-		return md.contentSize/md.count*100 + "%";
+		return md.contentSize + "%";
+
+		// if(md.contentSize >= md.count) {
+		// 	return "0";
+		// }
+		// return md.contentSize/md.count*100 + "%";
 	}
 
 	calcContentPos() {
 		var md = this.model;
-		return (md.count-md.contentSize) * (this.position/md.count) + "%";
+		return (100-md.contentSize) * (this.position/md.count) + "%";
 	}
 
 	created() {
@@ -133,7 +138,7 @@ export default class Scrollbar extends Vue {
 	updatePosByDrag(x, y) {
 		var md = this.model;
 		var ele = this.$el as HTMLDivElement;
-		var canMovePx = ele.clientHeight * (1 - this.model.contentSize / md.count);
+		var canMovePx = ele.clientHeight * (1 - this.model.contentSize/100);
 		// console.info(canMovePx);
 		if(canMovePx <= 0) {
 			return;
@@ -163,9 +168,9 @@ export default class Scrollbar extends Vue {
 		md.onChanging && md.onChanging(this.position);
 	}
 
-	updateContentSize() {
+	// updateContentSize() {
 
-	}
+	// }
 
 	setValue(val) {
 		var md = this.model;

@@ -8,100 +8,29 @@ import IScrollbar, { ScrollbarMd } from 'src/components/util/SimpleMonacoEditor/
 import LineNumberBox from 'src/components/util/SimpleMonacoEditor/LineNumberBox/LineNumberBox.vue';
 import { LineNumberMd } from 'src/components/util/SimpleMonacoEditor/LineNumberBox/LineNumberBoxTs';
 import { version } from 'punycode';
+import { EditorOption } from 'src/components/util/SimpleMonacoEditor/model/EditorOption';
+import { TextLine, TextItem } from 'src/components/util/SimpleMonacoEditor/model/TextLine';
 
-export class TextMdOption {
-	tabSize? = 4;			//unused
-	insertSpaces? = false;	//unused
-}
-
-export class TextMd {
-	editor: SimpleMonacoEditor = null;
-	option = new TextMdOption();
-
-	// val = "";
-	// onDidChangeContentCb = null;
-	history = [];
-
-	rows = 1;
-	maxWidth = 0;
-
-	setEditor(_editor) {
-		this.editor = _editor;
-	}
-
-	getValue() {
-		// return this.val;
-		return this.editor.textInput;
-	}
-
-	setValue(value: string) {
-		// this.val = value;
-		this.editor.setValue(value);
-	}
-
-	getLineCount() {
-		return this.rows;
-	}
-
-	// getLineContent() {
-	// 	return "";
-	// }
-
-	// updateOptions(opt:TextMdOption) {
-	// 	for(var key in opt) {
-	// 		this.option[key] = opt[key];
-	// 	}
-	// }
-
-	// onDidChangeContent(cb) {
-	// 	this.onDidChangeContentCb = cb;
-	// }
-}
-
-class TextItem {
-	value = "";
-	renderVlaue = "";
-	style = "";
-	pos = 0;
-	length = 0;
-	singleWordLength = 0;
-}
-
-class TextLine {
-	data: TextItem[] = [];
-	row = 0;
-	pos = 0;
-	length = 0;
-	singleWordLength = 0;
-
-	getLineStr() {
-		var rst = "";
-		for(var i = 0; i < this.data.length; ++i) {
-			rst += this.data[i].value;
-		}
-
-		return rst;
+class SelectMaskStyle {
+	style = new class {
+		left = "0";
+		// top = "0";
+		width = "0";
 	}
 }
 
-export class EditorOption {
-	model? = new TextMd();
-	fontSize? = 14;
-	readOnly? = false;
-	fontFamily? = "'simsun', Consolas, 'Courier New', monospace";
-	spaceRender? = "&ensp;";
-	theme? = "vs-dark";				//unused
-	minimap? = { enabled: false };	//unused
-	lineNumbersMinChars? = 3;		//unused
-	lineDecorationsWidth? = 0;		//unused
-	wordWrap? = "off";				//unused
-	autoClosingBrackets? = "never";	//unused
+class SelectLineItem {
+	style = new class {
+		top = "0";
+		height = "19px";
+	};
+	data: SelectMaskStyle[] = [];
 }
 
-@Component({ components: { Scrollbar, LineNumberBox }})
+@Component({ components: { Scrollbar, LineNumberBox } })
 export default class SimpleMonacoEditor extends Vue {
 	lines: TextLine[] = [new TextLine()];
-	
+
 	isMouseOver = false;
 	isFocus = false;
 
@@ -154,6 +83,8 @@ export default class SimpleMonacoEditor extends Vue {
 		height = "19px";
 	};
 
+	selectMaskStyle:SelectLineItem[] = [];
+
 	charWidth = 7;
 	lineHeight = 19;
 	needTestCharWidth = false;
@@ -162,7 +93,9 @@ export default class SimpleMonacoEditor extends Vue {
 	// selectRow = 0;
 	cursorWordPos = { row: 0, col: 0 };
 	cursorPos = { x: 0, y: 0 };
-	selectWordRange = { start:0, len:0 };
+	isSelectVer = false;
+	selectWordRange = { startRow: 0, startCol: 0, endRow:0, endCol: 0 };
+	selectRange = { start: 0, len: 0 };
 	contentPos = { x: 0, y: 0 };
 	cursorHold = false;
 	isIMEStart = false;
@@ -178,6 +111,9 @@ export default class SimpleMonacoEditor extends Vue {
 		"&ensp;&ensp;&ensp;&ensp;",
 	];
 
+	isDown = false;
+	downWordPos = { row: 0, col: 0 };
+
 	// @Watch("textInput")
 	// onTextInputChanged() {
 	// 	// console.info(this.textInput);
@@ -185,56 +121,68 @@ export default class SimpleMonacoEditor extends Vue {
 
 	created() {
 		this.horSlbMd.isVertical = false;
-		this.verSlbMd.onChanging = a=>this.onVerScrollbarChanging(a);
-		this.horSlbMd.onChanging = a=>this.onHorScrollbarChanging(a);
+		this.verSlbMd.onChanging = a => this.onVerScrollbarChanging(a);
+		this.horSlbMd.onChanging = a => this.onHorScrollbarChanging(a);
 	}
-	
+
 	mounted() {
 		var ele = this.$refs.textarea as HTMLTextAreaElement;
-		ele.addEventListener("input", e=>this.onTextareaChanged(e));
-		ele.addEventListener("copy", e=>this.onTextareaCopy(e));
-		ele.addEventListener("cut", e=>this.onTextareaCut(e));
-		ele.addEventListener("paste", e=>this.onTextareaPaste(e));
-		ele.addEventListener("keydown", e=>this.onTextareaKeydown(e), { passive: false });
-		ele.addEventListener("compositionstart", e=>this.onTextareaCompositionstart(e));
-		ele.addEventListener("compositionend", e=>this.onTextareaCompositionend(e));
-		ele.addEventListener("compositionupdate", e=>this.onTextareaCompositionupdate(e));
-		ele.addEventListener("keyup", e=>this.onTextareaKeyup(e));
+		ele.addEventListener("input", e => this.onTextareaChanged(e));
+		ele.addEventListener("copy", e => this.onTextareaCopy(e));
+		ele.addEventListener("cut", e => this.onTextareaCut(e));
+		ele.addEventListener("paste", e => this.onTextareaPaste(e));
+		ele.addEventListener("keydown", e => this.onTextareaKeydown(e), { passive: false });
+		ele.addEventListener("compositionstart", e => this.onTextareaCompositionstart(e));
+		ele.addEventListener("compositionend", e => this.onTextareaCompositionend(e));
+		ele.addEventListener("compositionupdate", e => this.onTextareaCompositionupdate(e));
+		ele.addEventListener("keyup", e => this.onTextareaKeyup(e));
 		ele.addEventListener("mousedown", this.onTextareaMousedown, { passive: false });
 		// ele.addEventListener("focus", e=>this.onTextareaFocus(e));
 		// ele.addEventListener("selectstart", e=>this.onTextareaKeyup(e));
 
 		var eleContentBox = this.$refs.contentBox as HTMLTextAreaElement;
-		eleContentBox.addEventListener("scroll", evt=>{
+		eleContentBox.addEventListener("scroll", evt => {
 			eleContentBox.scrollTop = 0;
 			// console.info(evt);
 		});
 
+		document.addEventListener("mousemove", this.anoOnDocMousemove, { passive: false });
+		document.addEventListener("mouseup", this.anoOnDocMouseup, { passive: false });
+
 		this.testCharWidth();
 	}
 
+	destryed() {
+		document.removeEventListener("mousemove", this.anoOnDocMousemove);
+		document.removeEventListener("mouseup", this.anoOnDocMouseup);
+	}
+
+	isShowScrollbar(md: ScrollbarMd) {
+		return md.contentSize > 0 && md.contentSize < 100;
+	}
+
 	onVerScrollbarChanging(val) {
-		// var ele = this.$el;
-		// var ele = this.$refs.contentBox as HTMLDivElement;
-		// var height = ele.clientHeight;
-		var textHeight = (this.totalRow - 1) * this.lineHeight;
-		this.contentPos.y = -textHeight * (val/100);
+		// var textHeight = (this.totalRow - 1) * this.lineHeight;
+		// this.contentPos.y = -textHeight * (val/100);
+		// this.contentStyle.top = this.contentPos.y + "px";
+
+		this.contentPos.y = -val;
 		this.contentStyle.top = this.contentPos.y + "px";
 	}
 
 	onHorScrollbarChanging(val) {
 		var ele = this.$refs.contentBox as HTMLDivElement;
 		var width = ele.clientWidth;
-		this.contentPos.x = -width*(100 - this.horSlbMd.contentSize)/100 * (val/100);
+		this.contentPos.x = -width * (100 - this.horSlbMd.contentSize) / 100 * (val / 100);
 		this.contentStyle.left = this.contentPos.x + "px";
 	}
 
 	updateSpaceRender() {
 		var str = this.option.spaceRender;
 		var arr = [];
-		for(var i = 0; i < 5; ++i) {
+		for (var i = 0; i < 5; ++i) {
 			var tmp = "";
-			for(var j = 0; j < i; ++j) {
+			for (var j = 0; j < i; ++j) {
 				tmp += str;
 			}
 			arr.push(tmp);
@@ -242,20 +190,20 @@ export default class SimpleMonacoEditor extends Vue {
 		this.tableFill = arr;
 	}
 
-	updateOptions(opt:EditorOption) {
-		for(var key in opt) {
+	updateOptions(opt: EditorOption) {
+		for (var key in opt) {
 			this.option[key] = opt[key];
 		}
 
-		if("spaceRender" in opt) {
+		if ("spaceRender" in opt) {
 			this.updateSpaceRender();
 		}
 
-		if(this.option.model.editor != this) {
+		if (this.option.model.editor != this) {
 			this.option.model.setEditor(this);
 		}
 
-		if(this.rootStyle.fontFamily != this.option.fontFamily) {
+		if (this.rootStyle.fontFamily != this.option.fontFamily) {
 			this.testCharWidth();
 		}
 
@@ -280,6 +228,8 @@ export default class SimpleMonacoEditor extends Vue {
 		this.lineNoMd.fontSize = this.option.fontSize;
 		this.lineNoMd.height = height;
 		this.lineStyle.lineHeight = this.lineStyle.height;
+
+		this.updateSelectRangeHieght();
 	}
 
 	// getLineHeight() {
@@ -297,7 +247,7 @@ export default class SimpleMonacoEditor extends Vue {
 		// this.verSlbMd.contentSize = verSize;
 		this.updateVerSlbSize();
 
-		if(this.needTestCharWidth) {
+		if (this.needTestCharWidth) {
 			this.needTestCharWidth = false;
 			this.testCharWidth();
 		}
@@ -317,7 +267,7 @@ export default class SimpleMonacoEditor extends Vue {
 	}
 
 	testCharWidth() {
-		if(this.needTestCharWidth) {
+		if (this.needTestCharWidth) {
 			return;
 		}
 
@@ -327,12 +277,12 @@ export default class SimpleMonacoEditor extends Vue {
 
 		var width = ele.getBoundingClientRect().width;
 		// console.info("aaa", width);
-		if(width == 0) {
+		if (width == 0) {
 			this.needTestCharWidth = true;
 			return;
 		}
 
-		if(width == this.charWidth) {
+		if (width == this.charWidth) {
 			return;
 		}
 
@@ -358,8 +308,8 @@ export default class SimpleMonacoEditor extends Vue {
 		var row = 0;
 		var col = 0;
 		// var str = "";
-		for(var i = 0; i < arr.length; ++i) {
-			if(tmpLen + arr[i].length + i >= startPos) {
+		for (var i = 0; i < arr.length; ++i) {
+			if (tmpLen + arr[i].length + i >= startPos) {
 				row = i;
 				col = startPos - tmpLen - i;
 				// str = arr[i].substr(0, col);
@@ -368,24 +318,30 @@ export default class SimpleMonacoEditor extends Vue {
 			tmpLen += arr[i].length;
 		}
 
-		if(arr.length != this.totalRow) {
+		if (arr.length != this.totalRow) {
 			this.totalRow = arr.length;
 			this.udpateTotalRow();
 		}
 
 		this.cursorWordPos.col = col;
-		if(row != this.cursorWordPos.row) {
+		if (row != this.cursorWordPos.row) {
 			this.cursorWordPos.row = row;
 			this.updateSelectRow();
 		}
 
 		var xsize = this.calcTextLen(arr[row].substr(0, col));
-		if(!this.keepCacheCursorSingleWordCol) {
+		if (!this.keepCacheCursorSingleWordCol) {
 			this.cacheCursorSingleWordCol = xsize;
 		}
 		this.cursorPos.x = xsize * this.charWidth;
 		this.cursorPos.y = row * this.lineHeight;
 		this.updateCursor();
+	}
+
+	getFullShowRows() {
+		// var ele = this.$refs.contentBox as HTMLDivElement;
+		var height = this.getContentHeight();
+		return Math.floor(height / this.lineHeight);
 	}
 
 	getShowRows() {
@@ -395,18 +351,23 @@ export default class SimpleMonacoEditor extends Vue {
 	}
 
 	updateVerSlbSize() {
-		// var md = this.option.model;
-		// var rows = this.totalRow;
-		// var ele = this.$refs.contentBox as HTMLDivElement;
 		var height = this.getContentHeight();
-		var textHeight = (this.totalRow - 1) * this.lineHeight;
-		var verSize = height / (textHeight + height) * 100;
-		this.verSlbMd.contentSize = verSize;
+		// var textHeight = (this.totalRow - 1) * this.lineHeight;
+		// var verSize = height / (textHeight + height) * 100;
+		// this.verSlbMd.contentSize = verSize;
+
+		var count = (this.totalRow - 1) * this.lineHeight;
+		this.verSlbMd.contentSize = height / (height + count) * 100;
+		this.verSlbMd.count = count;
 	}
 
 	udpateTotalRow() {
-		this.updateVerSlbSize();
 		this.updateLineNoRow();
+		this.updateVerSlbSize();
+
+		this.limitScroll();
+		// var ele = this.$refs.slbVer as IScrollbar;
+		// this.onVerScrollbarChanging(ele.getValue());
 	}
 
 	updateLineNoRow() {
@@ -415,7 +376,7 @@ export default class SimpleMonacoEditor extends Vue {
 		// 	showRows = this.totalRow - this.lineNoMd.start;
 		// }
 		// this.lineNoMd.count = showRows;
-		
+
 		this.lineNoMd.count = this.totalRow;
 	}
 
@@ -438,13 +399,13 @@ export default class SimpleMonacoEditor extends Vue {
 	calcTextLen(str) {
 		// str = str.replace(/[^\u0000-\u00FF]/g, "  ");
 		var len = 0;
-		for(var j = 0; j < str.length; ++j) {
-			if(str.charAt(j) == '\t') {
-				len += 4-(len%4);
+		for (var j = 0; j < str.length; ++j) {
+			if (str.charAt(j) == '\t') {
+				len += 4 - (len % 4);
 				continue;
 			}
 			var no = str.charCodeAt(j);
-			if(no >= 0 && no <= 0xff) {
+			if (no >= 0 && no <= 0xff) {
 				len += 1;
 			} else {
 				len += 2;
@@ -463,25 +424,25 @@ export default class SimpleMonacoEditor extends Vue {
 
 		var len = 0;
 		var rst = "";
-		for(var i = 0; i < str.length; ++i) {
+		for (var i = 0; i < str.length; ++i) {
 			var no = str.charCodeAt(i);
 			var ch = str.charAt(i);
-			if(no > 0xff) {
+			if (no > 0xff) {
 				len += 2;
 				rst += ch;
 				continue;
 			}
-			if(ch == '\t') {
-				var count = 4-(len%4);
+			if (ch == '\t') {
+				var count = 4 - (len % 4);
 				len += count;
 				rst += this.tableFill[count];
 				continue;
 			}
-			switch(ch) {
+			switch (ch) {
 				case "&": rst += "&amp;"; break;
 				case "<": rst += "&lt;"; break;
 				case ">": rst += "&gt;"; break;
-				default : rst += ch; break;
+				default: rst += ch; break;
 			}
 			len += 1;
 		}
@@ -494,7 +455,7 @@ export default class SimpleMonacoEditor extends Vue {
 		var arr = str.replace(/\r\n/g, "\n").split("\n");
 		var rst = [];
 		var pos = 0;
-		for(var i = 0; i < arr.length; ++i) {
+		for (var i = 0; i < arr.length; ++i) {
 			var line = new TextLine();
 			line.pos = pos + i;
 
@@ -506,7 +467,7 @@ export default class SimpleMonacoEditor extends Vue {
 
 			line.length = md.value.length;
 			line.singleWordLength = md.singleWordLength;
-			
+
 			rst.push(line);
 
 			pos += arr[i].length
@@ -560,7 +521,7 @@ export default class SimpleMonacoEditor extends Vue {
 		// 		// delete forward
 		// 	}
 		// }
-		if(!this.isIMEStart) {
+		if (!this.isIMEStart) {
 			this.updateCursorByWordPos();
 		}
 
@@ -581,14 +542,14 @@ export default class SimpleMonacoEditor extends Vue {
 		// console.info(evt);
 	}
 
-	updateView() {
-		var ele = this.$refs.textarea as HTMLTextAreaElement;
-		var val = ele.value;
-		var arr = val.replace(/\r\n/g, "\n").split("\n");
-	}
+	// updateView() {
+	// 	var ele = this.$refs.textarea as HTMLTextAreaElement;
+	// 	var val = ele.value;
+	// 	var arr = val.replace(/\r\n/g, "\n").split("\n");
+	// }
 
 	onTextareaPaste(evt) {
-		if(!evt.clipboardData) {
+		if (!evt.clipboardData) {
 			this.lastTextareaPaste = "";
 			return;
 		}
@@ -602,20 +563,39 @@ export default class SimpleMonacoEditor extends Vue {
 		return ele.clientHeight;
 	}
 
+	limitScroll() {
+		// var height = this.getContentHeight();
+		var rowHeight = (this.totalRow - 1) * this.lineHeight;
+		var pos = this.contentPos.y + rowHeight;
+		// console.info(pos, this.contentPos.y, rowHeight, this.totalRow);
+		if (pos < 0) {
+			var val = this.pxToScrollVal(true, rowHeight);
+			// console.info("bbb", val);
+			var ele = this.$refs.slbVer as IScrollbar;
+			var oldValue = ele.getValue();
+			// console.info(val, oldValue);
+			if (val == oldValue) {
+				this.onVerScrollbarChanging(val);
+			} else {
+				ele.setValue(val);
+			}
+		}
+	}
+
 	scrollToRow(row) {
 		var height = this.getContentHeight();
-		
+
 		// var row = this.cursorWordPos.row;
 		var rowHeight = row * this.lineHeight;
 		var pos = this.contentPos.y + rowHeight;
 		// console.info(row, pos, height);
 		// var val = NaN;
-		if(pos + this.lineHeight * 2 >= height) {
+		if (pos + this.lineHeight * 2 >= height) {
 			var val = this.pxToScrollVal(true, rowHeight + this.lineHeight * 2 - height);
 			// console.info("aaa", val);
 			var ele = this.$refs.slbVer as IScrollbar;
 			ele.setValue(val);
-		} else if(pos < 0) {
+		} else if (pos < 0) {
 			var val = this.pxToScrollVal(true, rowHeight);
 			// console.info("bbb", val);
 			var ele = this.$refs.slbVer as IScrollbar;
@@ -652,10 +632,10 @@ export default class SimpleMonacoEditor extends Vue {
 		this.textareaStyle.width = len + "px";
 	}
 
-	setTextAreaCursorPos(pos, row=-1) {
+	setTextAreaCursorPos(pos, row = -1) {
 		var ele = this.$refs.textarea as HTMLTextAreaElement;
 		ele.selectionStart = ele.selectionEnd = pos;
-		if(row < 0) {
+		if (row < 0) {
 			ele.scrollTop = this.lineHeight * this.cursorWordPos.row;
 		} else {
 			ele.scrollTop = this.lineHeight * row;
@@ -668,18 +648,18 @@ export default class SimpleMonacoEditor extends Vue {
 		// console.info("keydown", ele.selectionStart, ele.selectionEnd);
 		// console.info("keydown", evt.keyCode, evt.key, evt);
 
-		if(this.isIMEStart) {
+		if (this.isIMEStart) {
 			return;
 		}
 
 		// readonly
-		if(this.option.readOnly) {
+		if (this.option.readOnly) {
 			evt.preventDefault && evt.preventDefault();
 			return;
 		}
 
 		// ctrl
-		if(evt.ctrlKey) {
+		if (evt.ctrlKey) {
 			switch (evt.keyCode) {
 				case 90: {
 					// z
@@ -712,11 +692,12 @@ export default class SimpleMonacoEditor extends Vue {
 		}
 
 		var startPos = ele.selectionStart;
-		
+
 		// enter
-		var gap = evt.keyCode == 13 ? 1 : 0;
-		var row = this.cursorWordPos.row + gap;
-		this.scrollToRow(row);
+		// var gap = evt.keyCode == 13 ? 1 : 0;
+		// var row = this.cursorWordPos.row + gap;
+
+		var scrollRow = this.cursorWordPos.row;
 
 		var prevent = true;
 		switch (evt.keyCode) {
@@ -727,14 +708,15 @@ export default class SimpleMonacoEditor extends Vue {
 				this.onTextareaChanged(null);
 				break;
 			}
-			// case 13: {
-			// 	// enter
-			// 	prevent = false;
-			// 	break;
-			// }
+			case 13: {
+				// enter
+				prevent = false;
+				scrollRow += 1;
+				break;
+			}
 			case 37: {
 				// left
-				if(startPos > 0) {
+				if (startPos > 0) {
 					this.cursorHold = true;
 					// ele.selectionStart = ele.selectionEnd = startPos - 1;
 					this.setTextAreaCursorPos(startPos - 1);
@@ -746,7 +728,7 @@ export default class SimpleMonacoEditor extends Vue {
 			}
 			case 39: {
 				// right
-				if(startPos < ele.value.length) {
+				if (startPos < ele.value.length) {
 					// console.info("aaa", startPos, ele.value.length);
 					this.cursorHold = true;
 					// ele.selectionStart = ele.selectionEnd = startPos + 1;
@@ -757,52 +739,10 @@ export default class SimpleMonacoEditor extends Vue {
 				}
 				break;
 			}
-			case 38: {
-				// up
-				var row = this.cursorWordPos.row;
-				if(row > 0) {
-					this.cursorHold = true;
-					// var col = this.cursorWordPos.col;
-					// var str = this.lines[row].getLineStr().substr(0, col);
-					// var len = this.calcTextLen(str);
-					var len = this.cacheCursorSingleWordCol;
-					var newStr = this.lines[row-1].getLineStr();
-					var newCol = this.calcPosBySingleWordPos(newStr, len);
-					// ele.selectionStart = ele.selectionEnd = this.lines[row-1].pos + newCol;
-					this.setTextAreaCursorPos(this.lines[row-1].pos + newCol, row-1);
-					this.keepCacheCursorSingleWordCol = true;
-					this.updateCursorByWordPos();
-					this.keepCacheCursorSingleWordCol = false;
-				} else {
-					this.cursorHold = false;
-				}
-				break;
-			}
-			case 40: {
-				// down
-				var row = this.cursorWordPos.row;
-				if(row < this.lines.length-1) {
-					this.cursorHold = true;
-					// var col = this.cursorWordPos.col;
-					// var str = this.lines[row].getLineStr().substr(0, col);
-					// var len = this.calcTextLen(str);
-					var len = this.cacheCursorSingleWordCol;
-					var newStr = this.lines[row+1].getLineStr();
-					var newCol = this.calcPosBySingleWordPos(newStr, len);
-					// ele.selectionStart = ele.selectionEnd = this.lines[row+1].pos + newCol;
-					this.setTextAreaCursorPos(this.lines[row+1].pos + newCol, row+1);
-					this.keepCacheCursorSingleWordCol = true;
-					this.updateCursorByWordPos();
-					this.keepCacheCursorSingleWordCol = false;
-				} else {
-					this.cursorHold = false;
-				}
-				break;
-			}
 			case 36: {
 				// home
 				var col = this.cursorWordPos.col;
-				if(col != 0) {
+				if (col != 0) {
 					this.cursorHold = true;
 					var row = this.cursorWordPos.row;
 					// ele.selectionStart = ele.selectionEnd = this.lines[row].pos;
@@ -815,8 +755,10 @@ export default class SimpleMonacoEditor extends Vue {
 			}
 			case 35: {
 				// end
+				var row = this.cursorWordPos.row;
 				var col = this.cursorWordPos.col;
-				if(col < this.lines[row].length) {
+				// console.info(col, this.lines[row].length);
+				if (col < this.lines[row].length) {
 					this.cursorHold = true;
 					var row = this.cursorWordPos.row;
 					// ele.selectionStart = ele.selectionEnd = this.lines[row].pos + this.lines[row].length;
@@ -827,32 +769,80 @@ export default class SimpleMonacoEditor extends Vue {
 				}
 				break;
 			}
+			case 38: {
+				// up
+				scrollRow = this.jumpToRow(this.cursorWordPos.row - 1);
+				break;
+			}
+			case 40: {
+				// down
+				scrollRow = this.jumpToRow(this.cursorWordPos.row + 1);
+				break;
+			}
 			case 33: {
 				// page up
+				var rows = this.getFullShowRows() - 1;
+				scrollRow = this.jumpToRow(this.cursorWordPos.row - rows);
 				break;
 			}
 			case 34: {
 				// page down
+				var rows = this.getFullShowRows() - 1;
+				scrollRow = this.jumpToRow(this.cursorWordPos.row + rows);
 				break;
 			}
-			// case 8: {
-			// 	// backspace
-			// 	break;
-			// }
+			case 8: {
+				// backspace
+				this.cursorHold = true;
+				prevent = false;
+				if (scrollRow > 0 && this.cursorWordPos.col == 0) {
+					scrollRow -= 1;
+				}
+				break;
+			}
 			// case 46: {
 			// 	// delete
 			// 	break;
 			// }
-			default:{
+			default: {
 				this.cursorHold = true;
 				prevent = false;
 				break;
 			}
 		}
 
-		if(prevent) {
+		this.scrollToRow(scrollRow);
+
+		if (prevent) {
 			evt.preventDefault && evt.preventDefault();
 		}
+	}
+
+	jumpToRow(newRow) {
+		if (newRow >= this.totalRow) {
+			newRow = this.totalRow - 1;
+		} else if (newRow < 0) {
+			newRow = 0;
+		}
+
+		var row = this.cursorWordPos.row;
+		if (newRow == row) {
+			this.cursorHold = false;
+			return row;
+		}
+
+		this.cursorHold = true;
+
+		var len = this.cacheCursorSingleWordCol;
+		var newStr = this.lines[newRow].getLineStr();
+		var newCol = this.calcPosBySingleWordPos(newStr, len);
+
+		this.setTextAreaCursorPos(this.lines[newRow].pos + newCol, newRow);
+		this.keepCacheCursorSingleWordCol = true;
+		this.updateCursorByWordPos();
+		this.keepCacheCursorSingleWordCol = false;
+
+		return newRow;
 	}
 
 	onTextareaKeyup(evt) {
@@ -880,15 +870,15 @@ export default class SimpleMonacoEditor extends Vue {
 	calcPosBySingleWordPos(str, col) {
 		// var len = this.calcTextLen(str);
 		var len = 0;
-		for(var i = 0; i < str.length; ++i) {
+		for (var i = 0; i < str.length; ++i) {
 			var width = 0;
-			if(str.charAt(i) == '\t') {
-				width = 4-(len%4);
+			if (str.charAt(i) == '\t') {
+				width = 4 - (len % 4);
 				// len += width;
 				// continue;
 			} else {
 				var no = str.charCodeAt(i);
-				if(no >= 0 && no <= 0xff) {
+				if (no >= 0 && no <= 0xff) {
 					width = 1;
 					// len += 1;
 				} else {
@@ -896,10 +886,10 @@ export default class SimpleMonacoEditor extends Vue {
 					// len += 2;
 				}
 			}
-			if(col <= len + width / 2) {
+			if (col <= len + width / 2) {
 				return i;
-			}else if(col <= len + width) {
-				return i+1;
+			} else if (col <= len + width) {
+				return i + 1;
 			}
 			len += width;
 		}
@@ -912,23 +902,23 @@ export default class SimpleMonacoEditor extends Vue {
 		// var rst = 0;
 
 		var len = 0;
-		for(var i = 0; i < str.length; ++i) {
+		for (var i = 0; i < str.length; ++i) {
 			var no = str.charCodeAt(i);
 			var ch = str.charAt(i);
 			var chw = this.charWidth;
-			if(no > 0xff) {
+			if (no > 0xff) {
 				len += 2;
 				chw = this.charWidth * 2;
-			} else if(ch == '\t') {
-				var tmp = 4-(len%4);
+			} else if (ch == '\t') {
+				var tmp = 4 - (len % 4);
 				len += tmp;
 				chw = tmp * this.charWidth;
 			} else {
 				len += 1;
 			}
-			if(px < totalPx + chw / 2) {
+			if (px < totalPx + chw / 2) {
 				return i;
-			} else if(px < totalPx + chw) {
+			} else if (px < totalPx + chw) {
 				return i + 1;
 			}
 			totalPx += chw;
@@ -937,13 +927,166 @@ export default class SimpleMonacoEditor extends Vue {
 		return str.length;
 	}
 
+	onContentBoxMouseDownBack(evt) {
+		
+	}
+
+	onContentBoxMouseDownLineNumber(evt) {
+		
+	}
+
+	onContentBoxMouseDownMask(evt) {
+		// console.info("aaa");
+		this.setEditorFocus();
+
+		var row = this.lines.length - 1;
+		var col = this.lines[row].length;
+		this.markDownPos(evt, row, col);
+
+		var ele = this.$refs.textarea as HTMLTextAreaElement;
+		this.setTextAreaCursorPos(ele.value.length);
+		this.updateCursorByWordPos();
+		return;
+	}
+
+	onContentBoxMouseDownMainArea(evt) {
+		// console.info("bbb");
+		this.setEditorFocus();
+
+		var eleDown = evt.target as HTMLElement;
+		var row = parseInt(eleDown.getAttribute("row"));
+		var startCol = parseInt(eleDown.getAttribute("col"));
+		if (isNaN(row) || row < 0 || row >= this.lines.length) {
+			return;
+		}
+
+		var line = this.lines[row];
+		var pos = 0;
+		var col = 0;
+		if (isNaN(startCol)) {
+			col = line.length;
+			// pos = line.pos + line.length;
+		} else {
+			var px = evt.layerX;
+			col = this.calcPos(line.getLineStr(), px);
+			// pos = line.pos + this.calcPos(line.getLineStr(), px);
+			// console.info(line.pos, this.charWidth, pos, px, this.calcPos(line.getLineStr(), px), line.getLineStr());
+		}
+		pos = line.pos + col;
+		this.markDownPos(evt, row, col);
+
+		// ele.selectionStart = ele.selectionEnd = pos;
+		this.setTextAreaCursorPos(pos);
+		this.updateCursorByWordPos();
+	}
+
+	setEditorFocus() {
+		if(this.isFocus) {
+			return;
+		}
+
+		var ele = this.$refs.textarea as HTMLTextAreaElement;
+		ele.focus();
+
+		this.isFocus = true;
+		this.cursorStyle.display = "";
+	}
+
+	markDownPos(evt, row, col) {
+		this.isDown = true;
+		this.downWordPos.row = row;
+		this.downWordPos.col = col;
+
+		this.setSelectRange(false, row, col, row, col);
+
+		// this.selectWordRange.startRow = this.selectWordRange.endRow = row;
+		// this.selectWordRange.startCol = this.selectWordRange.endCol = col;
+		// this.updateSelectRange();
+	}
+
+	updateSelectRangeHieght() {
+		var arr = this.selectMaskStyle;
+		var strH = this.lineHeight + "px";
+		for(var i = 0; i < arr.length; ++i) {
+			arr[i].style.height = strH;
+		}
+	}
+
+	isSelectRange() {
+		var md = this.selectWordRange;
+		return !(md.startRow == md.endRow && md.startCol == md.endCol);
+	}
+
+	setSelectRange(_isSelectVer, startRow, startCol, endRow, endCol) {
+		this.isSelectVer = _isSelectVer;
+		this.selectWordRange.startRow = startRow;
+		this.selectWordRange.startCol = startCol;
+		this.selectWordRange.endRow = endRow;
+		this.selectWordRange.endCol = endCol;
+		// if(this.totalRow > 3) {
+		// 	this.selectWordRange.startRow = 0;
+		// 	this.selectWordRange.startCol = 0;
+		// 	this.selectWordRange.endRow = 2;
+		// 	this.selectWordRange.endCol = this.lines[2].length;
+		// }
+		this.updateSelectRange();
+	}
+
+	updateSelectRange() {
+		var arr: SelectLineItem[] = [];
+		var md = this.selectWordRange;
+		// var lineHeight = this.lineHeight;
+		var strH = this.lineHeight + "px";
+		for(var i = md.startRow; i <= md.endRow; ++i) {
+			var tmp = new SelectLineItem();
+			tmp.style.top = i * this.lineHeight + "px";
+			tmp.style.height = strH;
+			var left = 0;
+			var right = 0;
+			var str = this.lines[i].getLineStr();
+			if(i == md.startRow) {
+				// var str = str.substr(0, md.startCol);
+				left = this.calcTextLen(str.substr(0, md.startCol));
+			}
+			
+			if(i == md.endRow) {
+				// var str = str.substr(0, md.endCol);
+				right = this.calcTextLen(str.substr(0, md.endCol));
+			} else {
+				right = this.calcTextLen(str) + 1;
+			}
+
+			var tmp2 = new SelectMaskStyle();
+			tmp2.style.left = left * this.charWidth + "px";
+			tmp2.style.width = (right - left) * this.charWidth + "px";
+			tmp.data.push(tmp2);
+			arr.push(tmp);
+		}
+
+		this.selectMaskStyle = arr;
+	}
+
+	anoOnDocMousemove = e=>this.onDocMousemove(e);
+	onDocMousemove(evt) {
+		if(!this.isDown) {
+			return;
+		}
+	}
+
+	anoOnDocMouseup = e=>this.onDocMouseup(e);
+	onDocMouseup(evt) {
+		this.isDown = false;
+	}
+
 	onContentBoxMousedown(evt) {
+		evt.preventDefault && evt.preventDefault();
+
 		var ele = this.$refs.textarea as HTMLTextAreaElement;
 
 		// console.info(evt);
 		var eleMask = this.$refs.contentMask as HTMLDivElement;
 		var eleDown = evt.target as HTMLElement;
-		if(eleDown == eleMask) {
+		if (eleDown == eleMask) {
 			// ele.selectionStart = ele.selectionEnd = ele.value.length;
 			this.setTextAreaCursorPos(ele.value.length);
 			this.updateCursorByWordPos();
@@ -951,7 +1094,7 @@ export default class SimpleMonacoEditor extends Vue {
 		}
 		var row = parseInt(eleDown.getAttribute("row"));
 		var col = parseInt(eleDown.getAttribute("col"));
-		if(isNaN(row) || row < 0 || row >= this.lines.length) {
+		if (isNaN(row) || row < 0 || row >= this.lines.length) {
 			return;
 		}
 
@@ -959,7 +1102,7 @@ export default class SimpleMonacoEditor extends Vue {
 
 		var line = this.lines[row];
 		var pos = 0;
-		if(isNaN(col)) {
+		if (isNaN(col)) {
 			pos = line.pos + line.length;
 		} else {
 			var px = evt.layerX;
@@ -973,7 +1116,7 @@ export default class SimpleMonacoEditor extends Vue {
 	}
 
 	onMousedown(evt) {
-		
+		evt.preventDefault && evt.preventDefault();
 		// console.info("111", ele.selectionStart, ele.value.replace("\n", "11"));
 	}
 
@@ -1007,20 +1150,19 @@ export default class SimpleMonacoEditor extends Vue {
 		this.setTextAreaCursorPos(nowPos);
 	}
 
-	onMouseup() {
-		var ele = this.$refs.textarea as HTMLTextAreaElement;
-		ele.focus();
-
-		this.isFocus = true;
-		this.cursorStyle.display = "";
+	onMouseup(evt) {
 		// console.info("aaa", ele);
 	}
 
 	pxToScrollVal(isVer, pxVal) {
+		return pxVal;
 		// var ele = this.$refs.contentBox as HTMLDivElement;
 		if (isVer) {
+			if (this.totalRow <= 1) {
+				return 0;
+			}
 			var textHeight = (this.totalRow - 1) * this.lineHeight;
-			// console.info(pxVal, textHeight, ele.clientHeight, pxVal / (textHeight + ele.clientHeight) * 100);
+			// console.info(pxVal, textHeight, this.totalRow, this.lineHeight);
 			return pxVal / (textHeight) * 100;
 		} else {
 			return 0;
@@ -1028,7 +1170,7 @@ export default class SimpleMonacoEditor extends Vue {
 	}
 
 	setScrollVal(isVer, val) {
-		if(isVer) {
+		if (isVer) {
 			var ele = this.$refs.slbVer as IScrollbar;
 			ele.setValue(val);
 		} else {
@@ -1040,12 +1182,12 @@ export default class SimpleMonacoEditor extends Vue {
 	onMousewheel(evt) {
 		var val = evt.wheelDelta;
 
-		if(evt.shiftKey) {
+		if (evt.shiftKey) {
 			return;
 		}
 
 		var scrollVal = this.pxToScrollVal(true, 125) * (val > 0 ? -1 : 1);
-		
+
 		var ele = this.$refs.slbVer as IScrollbar;
 		ele.setValue(ele.getValue() + scrollVal);
 	}

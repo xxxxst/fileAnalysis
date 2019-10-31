@@ -1,14 +1,19 @@
 <template>
 
-<div class="simple-monaco-editor" :style="rootStyle" @mouseover="onOver()" @mouseout="onOut()" @mousedown="onMousedown($event)" @mouseup="onMouseup()" @mousewheel="onMousewheel($event)">
-	<div class="content-box" ref="contentBox" @mousedown="onContentBoxMousedown($event)">
-		<div class="content-mask" ref="contentMask"></div>
+<div class="simple-monaco-editor" :style="rootStyle" @mouseover="onOver()" @mouseout="onOut()" @mousedown="onMousedown($event)" @mouseup="onMouseup($event)" @mousewheel="onMousewheel($event)">
+	<div class="content-box" ref="contentBox">
+		<div class="content-mask" ref="contentMask" @mousedown="onContentBoxMouseDownMask($event)"></div>
 		<div class="content" :style="contentStyle">
 			<div class="edit-box">
 				<div class="content-back">
-					<div class="select-row" :style="selectRowStyle"></div>
+					<div class="select-range" :class="{'select-range-focus':isFocus}" >
+						<div class="line" v-for="(it,idx) in selectMaskStyle" :key="idx" :style="it.style">
+							<span v-for="(it2,idx2) in it.data" :key="idx2" :style="it2.style"></span>
+						</div>
+					</div>
+					<div class="select-row" v-show="!isSelectRange()" :style="selectRowStyle"></div>
 				</div>
-				<div class="content-main" ref="contentMain">
+				<div class="content-main" ref="contentMain" @mousedown="onContentBoxMouseDownMainArea($event)">
 					<div class="line" v-for="(it, idx) in lines" :key="idx" :style="lineStyle" :row="idx">
 						<span v-for="(it2,idx2) in it.data" :key="idx2" :row="idx" :col="0" v-html="it2.renderVlaue"></span>
 					</div>
@@ -24,7 +29,7 @@
 	</div>
 
 	<Scrollbar class="slb-ver" :model="verSlbMd" ref="slbVer"/>
-	<Scrollbar class="slb-hor" :model="horSlbMd" v-show="horSlbMd.contentSize<100" ref="slbHor"/>
+	<Scrollbar class="slb-hor" :model="horSlbMd" v-show="isShowScrollbar(horSlbMd)" ref="slbHor"/>
 </div>
 </template>
 
@@ -56,6 +61,15 @@ export default ctl;
 				position: absolute; left: 37px; top: 0; right: 0; height: 100%;
 				>.content-back {
 					position: absolute; left: 0; top: 0; right: 0; height: 0; pointer-events: none;
+					>.select-range {
+						>.line {
+							display: block;
+							>span { display: inline-block; height: 100%; background: #3a3d41; }
+						}
+					}
+					>.select-range-focus {
+						>.line>span { background: #264f78; }
+					}
 					>.select-row { position: absolute; width: 100%; border: 2px solid #282828; }
 				}
 				>.content-main {

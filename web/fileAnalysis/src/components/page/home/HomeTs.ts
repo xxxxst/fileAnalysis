@@ -16,7 +16,8 @@ import MonacoStructLang from 'src/model/MonacoStructLang';
 import { VIgnore } from 'src/sdk/tsHelp/vue/VIgnore';
 import HexView from 'src/components/util/HexView/HexView.vue';
 import SimpleMonacoEditor from 'src/components/util/SimpleMonacoEditor/SimpleMonacoEditor.vue';
-import ISimpleMonacoEditor, { TextMd } from 'src/components/util/SimpleMonacoEditor/SimpleMonacoEditorTs';
+import ISimpleMonacoEditor from 'src/components/util/SimpleMonacoEditor/SimpleMonacoEditorTs';
+import { TextMd } from 'src/components/util/SimpleMonacoEditor/model/TextMd';
 
 class FileStructAttr {
 	name = "";
@@ -224,7 +225,7 @@ export default class Home extends Vue {
 				lineNumbersMinChars: 3,
 				lineDecorationsWidth: 0,
 				// automaticLayout: true,
-				readOnly: true,
+				// readOnly: true,
 				wordWrap:"off",
 				autoClosingBrackets: "never",
 				fontFamily: "'simsunspace', 'simsun', Consolas, 'Courier New', monospace",
