@@ -86,6 +86,8 @@ export default class Home extends Vue {
 	@VIgnore()
 	textMd: TextMd = null;
 
+	log = "";
+
 	@Watch("winSize")
 	onSizeChanged(){
 		var smEditor = this.$refs.smEditor as ISimpleMonacoEditor;
@@ -105,6 +107,8 @@ export default class Home extends Vue {
 	}
 
 	created() {
+		window["log"] = (...args)=>{ this.log = args.join(", "); }
+
 		EnvMd.init();
 		
 		this.isDebug = !!window["__debug__"];

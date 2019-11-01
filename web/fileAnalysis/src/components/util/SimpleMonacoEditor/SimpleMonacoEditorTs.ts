@@ -12,6 +12,7 @@ import { EditorOption } from 'src/components/util/SimpleMonacoEditor/model/Edito
 import { TextLine, TextItem } from 'src/components/util/SimpleMonacoEditor/model/TextLine';
 
 class SelectMaskStyle {
+	pos = 0;
 	style = new class {
 		left = "0";
 		// top = "0";
@@ -20,12 +21,17 @@ class SelectMaskStyle {
 }
 
 class SelectLineItem {
+	row = 0;
+	pos = 0;
+	length = 0;
 	style = new class {
 		top = "0";
 		height = "19px";
 	};
 	data: SelectMaskStyle[] = [];
 }
+
+declare var log:(...args)=>null;
 
 @Component({ components: { Scrollbar, LineNumberBox } })
 export default class SimpleMonacoEditor extends Vue {
@@ -296,6 +302,7 @@ export default class SimpleMonacoEditor extends Vue {
 		ele.value = str;
 		this.onTextareaChanged(null);
 		// this.updateCursorByWordPos();
+		this.setSelectRange(false, 0, 0, 0, 0);
 	}
 
 	updateCursorByWordPos() {
@@ -936,7 +943,11 @@ export default class SimpleMonacoEditor extends Vue {
 	}
 
 	onContentBoxMouseDownMask(evt) {
-		// console.info("aaa");
+		// right mouse down
+		if(evt.button == 2) {
+			return;
+		}
+
 		this.setEditorFocus();
 
 		var row = this.lines.length - 1;
@@ -950,7 +961,11 @@ export default class SimpleMonacoEditor extends Vue {
 	}
 
 	onContentBoxMouseDownMainArea(evt) {
-		// console.info("bbb");
+		// right mouse down
+		if(evt.button == 2) {
+			return;
+		}
+
 		this.setEditorFocus();
 
 		var eleDown = evt.target as HTMLElement;
@@ -1038,6 +1053,9 @@ export default class SimpleMonacoEditor extends Vue {
 		// var lineHeight = this.lineHeight;
 		var strH = this.lineHeight + "px";
 		for(var i = md.startRow; i <= md.endRow; ++i) {
+			if(i < 0 || i >= this.totalRow) {
+				break;
+			}
 			var tmp = new SelectLineItem();
 			tmp.style.top = i * this.lineHeight + "px";
 			tmp.style.height = strH;
@@ -1066,11 +1084,88 @@ export default class SimpleMonacoEditor extends Vue {
 		this.selectMaskStyle = arr;
 	}
 
+	getElementPagePos(ele:HTMLElement) {
+		// if (ele.style.display == 'none') {
+		// 	return { x: 0, y: 0 };
+		// }
+
+		// IE
+		if (ele.getBoundingClientRect) {
+			var box = ele.getBoundingClientRect();
+			var x = Math.max(document.documentElement.scrollLeft, document.body.scrollLeft);
+			var y = Math.max(document.documentElement.scrollTop, document.body.scrollTop);
+			return { x: box.left + x, y: box.top + y };
+		}
+
+		var pos = [0, 0];
+		var parent = ele.parentNode as HTMLElement;
+		while (parent && parent.tagName != "BODY" && parent.tagName != "HTML") {
+			pos[0] -= parent.scrollLeft;
+			pos[1] -= parent.scrollTop;
+			parent = parent.parentNode as HTMLElement;
+		}
+		return { x: pos[0], y: pos[1] };
+	}
+
 	anoOnDocMousemove = e=>this.onDocMousemove(e);
 	onDocMousemove(evt) {
 		if(!this.isDown) {
 			return;
 		}
+
+		var ele = this.$refs.contentBox as HTMLDivElement;
+		ele.clientTop
+		var pos = this.getElementPagePos(ele);
+		var contHeight = ele.clientHeight;
+		var contWidth = ele.clientWidth;
+		var dx = evt.pageX - pos.x;
+		var dy = evt.pageY - pos.y;
+		if(dx < 0) {
+			dx = 0;
+		} else if(dx > contWidth) {
+			dx = contWidth;
+		}
+		if(dy < 0) {
+			dy = 0;
+		} else if(dy > contHeight) {
+			dy = contHeight;
+		}
+		var row = Math.floor((dy - this.contentPos.y) / this.lineHeight);
+		if(row < 0) {
+			row = 0;
+		} else if(row >= this.totalRow) {
+			row = this.totalRow - 1;
+		}
+
+		var line = this.lines[row];
+		var col = this.calcPos(line.getLineStr(), dx - this.contentPos.x - this.lineNoMd.width);
+		// var nowCol = Math.floor((dx - this.contentPos.x) / this.charWidth);
+		var startRow = this.downWordPos.row;
+		var startCol = this.downWordPos.col;
+		var endRow = row;
+		var endCol = col;
+		if(startRow > endRow || (startRow==endRow && startCol > endCol)) {
+			startRow = row;
+			startCol = col;
+			endRow = this.downWordPos.row;
+			endCol = this.downWordPos.col;
+		}
+
+		this.setSelectRange(false, startRow, startCol, endRow, endCol);
+
+		var curPos = this.getCursorPosByTablePos(row, col);
+		this.setTextAreaCursorPos(curPos);
+		this.updateCursorByWordPos();
+		
+		// log(startRow, startCol, endRow, endCol);
+	}
+
+	getCursorPosByTablePos(row, col) {
+		if(row < 0 || row >= this.totalRow) {
+			return 0;
+		}
+
+		return this.lines[row].pos + col;
 	}
 
 	anoOnDocMouseup = e=>this.onDocMouseup(e);
@@ -1078,42 +1173,47 @@ export default class SimpleMonacoEditor extends Vue {
 		this.isDown = false;
 	}
 
-	onContentBoxMousedown(evt) {
-		evt.preventDefault && evt.preventDefault();
+	// onContentBoxMousedown(evt) {
+	// 	// not left mouse down
+	// 	if(evt.button != 0) {
+	// 		return;
+	// 	}
+		
+	// 	evt.preventDefault && evt.preventDefault();
 
-		var ele = this.$refs.textarea as HTMLTextAreaElement;
+	// 	var ele = this.$refs.textarea as HTMLTextAreaElement;
 
-		// console.info(evt);
-		var eleMask = this.$refs.contentMask as HTMLDivElement;
-		var eleDown = evt.target as HTMLElement;
-		if (eleDown == eleMask) {
-			// ele.selectionStart = ele.selectionEnd = ele.value.length;
-			this.setTextAreaCursorPos(ele.value.length);
-			this.updateCursorByWordPos();
-			return;
-		}
-		var row = parseInt(eleDown.getAttribute("row"));
-		var col = parseInt(eleDown.getAttribute("col"));
-		if (isNaN(row) || row < 0 || row >= this.lines.length) {
-			return;
-		}
+	// 	// console.info(evt);
+	// 	var eleMask = this.$refs.contentMask as HTMLDivElement;
+	// 	var eleDown = evt.target as HTMLElement;
+	// 	if (eleDown == eleMask) {
+	// 		// ele.selectionStart = ele.selectionEnd = ele.value.length;
+	// 		this.setTextAreaCursorPos(ele.value.length);
+	// 		this.updateCursorByWordPos();
+	// 		return;
+	// 	}
+	// 	var row = parseInt(eleDown.getAttribute("row"));
+	// 	var col = parseInt(eleDown.getAttribute("col"));
+	// 	if (isNaN(row) || row < 0 || row >= this.lines.length) {
+	// 		return;
+	// 	}
 
-		// console.info(row, col);
+	// 	// console.info(row, col);
 
-		var line = this.lines[row];
-		var pos = 0;
-		if (isNaN(col)) {
-			pos = line.pos + line.length;
-		} else {
-			var px = evt.layerX;
-			pos = line.pos + this.calcPos(line.getLineStr(), px);
-			// console.info(line.pos, this.charWidth, pos, px, this.calcPos(line.getLineStr(), px), line.getLineStr());
-		}
-		// ele.selectionStart = ele.selectionEnd = pos;
-		this.setTextAreaCursorPos(pos);
-		this.updateCursorByWordPos();
-		// console.info(row, col);
-	}
+	// 	var line = this.lines[row];
+	// 	var pos = 0;
+	// 	if (isNaN(col)) {
+	// 		pos = line.pos + line.length;
+	// 	} else {
+	// 		var px = evt.layerX;
+	// 		pos = line.pos + this.calcPos(line.getLineStr(), px);
+	// 		// console.info(line.pos, this.charWidth, pos, px, this.calcPos(line.getLineStr(), px), line.getLineStr());
+	// 	}
+	// 	// ele.selectionStart = ele.selectionEnd = pos;
+	// 	this.setTextAreaCursorPos(pos);
+	// 	this.updateCursorByWordPos();
+	// 	// console.info(row, col);
+	// }
 
 	onMousedown(evt) {
 		evt.preventDefault && evt.preventDefault();

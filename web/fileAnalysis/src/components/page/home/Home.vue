@@ -54,7 +54,7 @@
 	</div>
 
 	<div class="bottom-box">
-
+		<span style="padding-left:5px;">{{log}}</span>
 	</div>
 
 </div>

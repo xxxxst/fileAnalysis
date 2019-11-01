@@ -63,8 +63,8 @@ export default ctl;
 					position: absolute; left: 0; top: 0; right: 0; height: 0; pointer-events: none;
 					>.select-range {
 						>.line {
-							display: block;
-							>span { display: inline-block; height: 100%; background: #3a3d41; }
+							position: absolute; display: block;
+							>span { position: absolute; display: inline-block; height: 100%; background: #3a3d41; }
 						}
 					}
 					>.select-range-focus {

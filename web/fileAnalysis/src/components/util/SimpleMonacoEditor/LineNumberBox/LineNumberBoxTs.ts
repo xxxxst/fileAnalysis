@@ -8,6 +8,7 @@ export class LineNumberMd {
 	count = 1;
 	fontSize = 14;
 	height = 19;
+	width = 37;
 	activeLine = 0;
 }
 
@@ -24,18 +25,23 @@ export default class LineNumberBox extends Vue {
 		return rst;
 	}
 
+	rootStyle = new class {
+		width = "37px";
+	};
+
 	linStyle = new class {
 		height = "19px";
-	}
+	};
 
 	noStyle = new class {
 		width = "21px";
-	}
+	};
 
 	@Watch("model", { immediate: true, deep: true})
 	onModelChanged() {
 		var md = this.model;
 		var noWidth = md.fontSize + 7;
+		this.rootStyle.width = md.width + "px";
 		this.linStyle.height = md.height + "px";
 		this.noStyle.width = noWidth + "px";
 	}
