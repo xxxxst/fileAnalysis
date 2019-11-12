@@ -52,7 +52,7 @@ export default class ContentMain extends Vue {
 		this.lines = this.formatText(str);
 	}
 
-	onContentBoxMouseDownMainArea(evt) {
+	onContentBoxMouseDownMainArea(evt:MouseEvent) {
 		var editor = this.getEditor();
 		if(!editor) {
 			return;
@@ -82,10 +82,18 @@ export default class ContentMain extends Vue {
 			col = editor.calcPos(line.getLineStr(), px);
 		}
 		pos = line.pos + col;
-		editor.markDownPos(evt, row, col);
+		
+		var curRow = editor.cursorWordPos.row;
+		var curCol = editor.cursorWordPos.col;
+
+		editor.markDownPos(evt, row, col, !evt.shiftKey);
 
 		editor.setTextAreaCursorPos(pos);
 		editor.updateCursorByWordPos();
+
+		if(evt.shiftKey) {
+			editor.setSelectRange(false, curRow, curCol, row, col);
+		}
 	}
 
 	getRowText(row) {

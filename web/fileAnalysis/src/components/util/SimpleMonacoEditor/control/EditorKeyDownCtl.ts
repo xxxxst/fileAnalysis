@@ -9,9 +9,18 @@ export default class EditorKeyDownCtl {
 	startPos = 0;
 	totalStrCount = 0;
 
+	mapCtrlDownCtl:Record<number, Function> = {};
 	mapDownCtl:Record<number, Function> = {};
 
 	constructor() {
+		this.mapCtrlDownCtl = {
+			90: this.onCtrlDownZ,
+			89: this.onCtrlDownY,
+			65: this.onCtrlDownA,
+			67: this.onCtrlDownC,
+			86: this.onCtrlDownV,
+			83: this.onCtrlDownS,
+		};
 		this.mapDownCtl = {
 			8 : this.onDownBackspace,
 			9 : this.onDownTab,
@@ -27,13 +36,26 @@ export default class EditorKeyDownCtl {
 		}
 	}
 
+	isSelectText() {
+		var sr = this.editor.selectWordRange;
+		return (sr.startRow != sr.endRow || sr.startCol != sr.endCol);
+	}
+
+	// isLastDownBackspace() {
+	// 	return this.editor.checkInsert.isBackspace(this.editor.lastInsertKeyCode);
+	// }
+
+	// isLastDownDelete() {
+	// 	return this.editor.checkInsert.isDelete(this.editor.lastInsertKeyCode);
+	// }
+
 	onKeydown(_evt:KeyboardEvent, _editor:SimpleMonacoEditor) {
 		this.evt = _evt;
 		this.editor = _editor;
 
 		var ele = this.editor.getInput();
 		// console.info("keydown", ele.selectionStart, ele.selectionEnd);
-		// console.info("keydown", evt.keyCode, evt.key, evt);
+		// console.info("keydown", this.evt.keyCode, this.evt.key, this.evt);
 
 		if (this.editor.isIMEStart) {
 			return;
@@ -51,45 +73,58 @@ export default class EditorKeyDownCtl {
 			return;
 		}
 
+		var keyCode = this.evt.keyCode;
+
 		// ctrl
 		if (this.evt.ctrlKey) {
-			switch (this.evt.keyCode) {
-				case 90: {
-					// z
-					break;
-				}
-				case 89: {
-					// y
-					break;
-				}
-				case 65: {
-					// a
-					break;
-				}
-				case 67: {
-					// c
-					break;
-				}
-				case 86: {
-					// v
-					break;
-				}
-				case 83: {
-					// s
-					break;
-				}
+			if(keyCode in this.mapCtrlDownCtl) {
+				this.mapCtrlDownCtl[keyCode].call(this);
 			}
 
 			this.evt.preventDefault && this.evt.preventDefault();
 			return;
 		}
 
-		var keyCode = this.evt.keyCode;
-
-		var isInsert = this.editor.checkIsInsert.isInsert(keyCode);
+		// var isInsert = this.editor.checkInsert.isInsert(keyCode);
 		// if(!isInsert) {
 		// 	return;
 		// }
+
+		var isRemove = this.editor.checkInsert.isRemove(keyCode);
+
+		var ch = this.editor.checkInsert.getInsertChar(keyCode, this.evt.key, this.evt.shiftKey);
+		if(!isRemove && ch == "") {
+			if(keyCode in this.mapDownCtl) {
+				this.mapDownCtl[keyCode].call(this);
+			}
+			// this.evt.preventDefault && this.evt.preventDefault();
+			return;
+		}
+
+		var isSelect = this.isSelectText();
+
+		if(isSelect) {
+			this.removeSelectText();
+			if(isRemove) {
+				this.editor.lastInsertKeyCode = keyCode;
+				this.editor.isLastKeyRemove = isRemove;
+				this.editor.cursorHold = true;
+				this.evt.preventDefault && this.evt.preventDefault();
+				return;
+			} else {
+				this.editor.lastChangeString += ch;
+			}
+		} else {
+			this.saveHistory(isRemove, ch, keyCode);
+		}
+
+		// if(this.isSelectText()) {
+
+		// }
+
+		// save history
+		this.editor.lastInsertKeyCode = keyCode;
+		this.editor.isLastKeyRemove = isRemove;
 
 		// var startPos = ele.selectionStart;
 
@@ -115,6 +150,124 @@ export default class EditorKeyDownCtl {
 		if (this.prevent) {
 			this.evt.preventDefault && this.evt.preventDefault();
 		}
+	}
+
+	private removeSelectText() {
+		// if(!this.isSelectText()) {
+		// 	return;
+		// }
+		// return;
+
+		var sr = this.editor.selectWordRange;
+		var lines = this.editor.getLines();
+		var len = 0;
+		var str = "";
+		for(var i = sr.startRow; i <= sr.endRow; ++i) {
+			var strLine = lines[i].getLineStr();
+			if(i == sr.startRow && i == sr.endRow) {
+				len = sr.endCol - sr.startCol;
+				str += strLine.substr(sr.startCol, len);
+			} else if(i == sr.startRow) {
+				len += lines[i].length - sr.startCol + 1;
+				str += strLine.substr(sr.startCol) + "\n";
+			} else if(i == sr.endRow) {
+				len += sr.endCol;
+				str += strLine.substr(0, sr.endCol);
+			} else {
+				len += lines[i].length + 1;
+				str += strLine + "\n";
+			}
+		}
+
+		var pos = lines[sr.startRow].pos + sr.startCol;
+		
+		this.editor.lastRemoveSelectString = str;
+		this.editor.lastRemoveSelectStringPos = pos;
+		// console.info(pos, len, JSON.stringify(sr));
+		this.editor.replaceText("", pos, len);
+
+		this.editor.setSelectRange(false, 0, 0, 0, 0);
+	}
+
+	private isChangeHistoryChar(keyCode) {
+		return this.editor.checkInsert.isChangeHistoryChar(keyCode);
+	}
+
+	private isTab(keyCode) {
+		return this.editor.checkInsert.isTab(keyCode);
+	}
+
+	private isEnter(keyCode) {
+		return this.editor.checkInsert.isEnter(keyCode);
+	}
+
+	private needSaveHistory(isRemove, keyCode) {
+		// var isRemove = this.editor.checkInsert.isRemove(keyCode);
+		if(this.editor.lastChangeString == "" && this.editor.lastRemoveSelectString == "") {
+			return false;
+		}
+
+		if(this.isTab(this.editor.lastInsertKeyCode)) {
+			return true;
+		}
+
+		var isLastRemove = this.editor.checkInsert.isRemove(this.editor.lastInsertKeyCode);
+		if(!isRemove && !isLastRemove) {
+			if(this.isChangeHistoryChar(keyCode)) {
+				return true;
+			}
+			return false;
+		}
+		if(!isRemove) {
+			return true;
+		}
+
+		return (this.editor.lastInsertKeyCode != keyCode);
+	}
+
+	private saveHistory(isRemove, chInsert, keyCode) {
+		if(this.needSaveHistory(isRemove, keyCode)) {
+			this.editor.historyCtl.saveHistory();
+		}
+
+		// console.info("111", isRemove, this.editor.lastChangeString);
+
+		if(isRemove) {
+			var isDel = this.editor.checkInsert.isDelete(keyCode);
+			var delChar = this.editor.getCursorText(isDel);
+			if(isDel) {
+				this.editor.lastChangeString += delChar;
+			} else {
+				this.editor.lastChangeString = delChar + this.editor.lastChangeString;
+			}
+		} else {
+			this.editor.lastChangeString += chInsert;
+		}
+	}
+
+	private onCtrlDownZ() {
+		this.editor.historyCtl.ctrlZ();
+	}
+
+	private onCtrlDownY() {
+		this.editor.historyCtl.ctrlY();
+	}
+
+	private onCtrlDownA() {
+		var lines = this.editor.getLines();
+		this.editor.setSelectRange(false, 0, 0, lines.length - 1, lines[lines.length - 1].length);
+	}
+
+	private onCtrlDownC() {
+		
+	}
+
+	private onCtrlDownV() {
+		
+	}
+
+	private onCtrlDownS() {
+		
 	}
 
 	private onDownTab() {
@@ -191,7 +344,7 @@ export default class EditorKeyDownCtl {
 
 	private onDownPageDown() {
 		var rows = this.editor.getFullShowRows() - 1;
-				this.scrollRow = this.editor.jumpToRow(this.editor.cursorWordPos.row + rows);
+		this.scrollRow = this.editor.jumpToRow(this.editor.cursorWordPos.row + rows);
 	}
 
 	private onDownBackspace() {

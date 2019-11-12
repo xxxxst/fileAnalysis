@@ -15,9 +15,10 @@ import IScrollbar, { ScrollbarMd } from './view/Scrollbar/ScrollbarTs';
 import { LineNumberMd } from './view/LineNumberBox/LineNumberBoxTs';
 import { EditorOption } from 'src/components/util/SimpleMonacoEditor/model/EditorOption';
 import { TextLine, TextItem } from 'src/components/util/SimpleMonacoEditor/model/TextLine';
-import CheckIsInsert from 'src/components/util/SimpleMonacoEditor/control/CheckIsInsert';
+import CheckInsert from 'src/components/util/SimpleMonacoEditor/control/CheckInsert';
 import ComEditCtl from 'src/components/util/SimpleMonacoEditor/control/ComEditCtl';
 import EditorKeyDownCtl from 'src/components/util/SimpleMonacoEditor/control/EditorKeyDownCtl';
+import HistoryCtl from 'src/components/util/SimpleMonacoEditor/control/HistoryCtl';
 
 @Component({ components: { ContentBack, ContentMain, ContentFill, Scrollbar, LineNumberBox } })
 export default class SimpleMonacoEditor extends Vue {
@@ -30,13 +31,15 @@ export default class SimpleMonacoEditor extends Vue {
 	option = new EditorOption();
 
 	@VIgnore()
-	checkIsInsert = new CheckIsInsert();
+	checkInsert = new CheckInsert();
 
 	@VIgnore()
 	comCtl = new ComEditCtl();
 	
 	@VIgnore()
 	keyDownCtl = new EditorKeyDownCtl();
+	@VIgnore()
+	historyCtl = new HistoryCtl();
 
 	verSlbMd = new ScrollbarMd();
 	horSlbMd = new ScrollbarMd();
@@ -65,6 +68,7 @@ export default class SimpleMonacoEditor extends Vue {
 	cursorPos = { x: 0, y: 0 };
 	isSelectVer = false;
 	selectWordRange = { startRow: 0, startCol: 0, endRow:0, endCol: 0 };
+	selectStartPos = { row: 0, col: 0 };
 	selectRange = { start: 0, len: 0 };
 	contentPos = { x: 0, y: 0 };
 	cursorHold = false;
@@ -74,9 +78,18 @@ export default class SimpleMonacoEditor extends Vue {
 	cacheCursorSingleWordCol = 0;
 
 	isDown = false;
+	mouseDownPos = { x: 0, y: 0 };
 	downWordPos = { row: 0, col: 0 };
 
+	lastRemoveSelectStringPos = -1;
+	lastRemoveSelectString = "";
+	lastChangeString = "";
+	isLastKeyRemove = false;
+	lastInsertKeyCode = -1;
+
 	created() {
+		this.historyCtl.editor = this;
+
 		this.horSlbMd.isVertical = false;
 		this.verSlbMd.onChanging = a => this.onVerScrollbarChanging(a);
 		this.horSlbMd.onChanging = a => this.onHorScrollbarChanging(a);
@@ -179,6 +192,27 @@ export default class SimpleMonacoEditor extends Vue {
 		return this.getContMain().lines[row];
 	}
 
+	getCursorTextPos() {
+		var x = this.cursorWordPos.row;
+		var y = this.cursorWordPos.col;
+		return this.getRow(x).pos + y;
+	}
+
+	getCursorText(isNext = false) {
+		var pos = this.getCursorTextPos();
+		if(!isNext) {
+			--pos;
+		}
+		if(pos < 0) {
+			return "";
+		}
+		var str = this.getInput().value;
+		if(pos >= str.length) {
+			return "";
+		}
+		return str.charAt(pos);
+	}
+
 	updateFontSize() {
 		var height = this.option.fontSize + 5;
 		var strH = height + "px";
@@ -223,6 +257,11 @@ export default class SimpleMonacoEditor extends Vue {
 		this.onTextareaChanged(null);
 		// this.updateCursorByWordPos();
 		this.setSelectRange(false, 0, 0, 0, 0);
+
+		this.historyCtl.clear();
+		this.lastChangeString = "";
+		this.isLastKeyRemove = false;
+		this.lastInsertKeyCode = -1;
 	}
 
 	updateCursorByWordPos() {
@@ -476,7 +515,7 @@ export default class SimpleMonacoEditor extends Vue {
 		
 	}
 
-	onContentBoxMouseDownMask(evt) {
+	onContentBoxMouseDownMask(evt:MouseEvent) {
 		// right mouse down
 		if(evt.button == 2) {
 			return;
@@ -486,11 +525,22 @@ export default class SimpleMonacoEditor extends Vue {
 
 		var row = this.getLines().length - 1;
 		var col = this.getRow(row).length;
-		this.markDownPos(evt, row, col);
+		
+		var curRow = this.cursorWordPos.row;
+		var curCol = this.cursorWordPos.col;
+
+		this.markDownPos(evt, row, col, !evt.shiftKey);
+
+		// this.markDownPos(evt, row, col);
 
 		var ele = this.getInput();
 		this.setTextAreaCursorPos(ele.value.length);
 		this.updateCursorByWordPos();
+
+		if(evt.shiftKey) {
+			this.setSelectRange(false, curRow, curCol, row, col);
+		}
+
 		return;
 	}
 
@@ -506,20 +556,48 @@ export default class SimpleMonacoEditor extends Vue {
 		this.getContFill().setFocus();
 	}
 
-	markDownPos(evt, row, col) {
+	markDownPos(evt:MouseEvent, row, col, resetSelectRange) {
 		this.isDown = true;
+		this.mouseDownPos.x = evt.pageX;
+		this.mouseDownPos.y = evt.pageY;
 		this.downWordPos.row = row;
 		this.downWordPos.col = col;
+		
+		this.historyCtl.saveHistory();
 
-		this.setSelectRange(false, row, col, row, col);
+		if(resetSelectRange) {
+			this.setSelectRange(false, row, col, row, col);
+		}
 	}
+
+	// setSelectRangeNoSort(_isSelectVer, r1, c1, r2, c2) {
+	// 	if (r1 > r2 || (r1 == r2 && c1 > c2)) {
+	// 		var tmp = 0;
+	// 		tmp = r1; r1 = r2; r2 = tmp;
+	// 		tmp = c1; c1 = c2; c2 = tmp;
+	// 	}
+
+	// 	this.setSelectRange(_isSelectVer, r1, c1, r2, c2);
+	// }
 
 	setSelectRange(_isSelectVer, startRow, startCol, endRow, endCol) {
 		this.isSelectVer = _isSelectVer;
+		console.info("aaa");
+
+		this.selectStartPos.row = startRow;
+		this.selectStartPos.col = startCol;
+
+		if (startRow > endRow || (startRow == endRow && startCol > endCol)) {
+			var tmp = 0;
+			tmp = startRow; startRow = endRow; endRow = tmp;
+			tmp = startCol; startCol = endCol; endCol = tmp;
+		}
+
 		this.selectWordRange.startRow = startRow;
 		this.selectWordRange.startCol = startCol;
 		this.selectWordRange.endRow = endRow;
 		this.selectWordRange.endCol = endCol;
+		// console.info("aaa");
 		this.getContBack().updateSelectRange();
 	}
 
@@ -543,10 +621,14 @@ export default class SimpleMonacoEditor extends Vue {
 	}
 
 	anoOnDocMousemove = e=>this.onDocMousemove(e);
-	onDocMousemove(evt) {
+	onDocMousemove(evt:MouseEvent) {
 		if(!this.isDown) {
 			return;
 		}
+		if(this.mouseDownPos.x == evt.pageX && this.mouseDownPos.y == evt.pageY) {
+			return;
+		}
+		// console.info("move");
 
 		var ele = this.$refs.contentBox as HTMLDivElement;
 		ele.clientTop
@@ -610,6 +692,17 @@ export default class SimpleMonacoEditor extends Vue {
 		evt.preventDefault && evt.preventDefault();
 	}
 
+	replaceText(str:string, pos:number, oldLength:number) {
+		var ele = this.getInput();
+		var oldStr = ele.value;
+		var newStr = oldStr.substr(0, pos) + str + oldStr.substr(pos+oldLength);
+		ele.value = newStr;
+		this.setTextAreaCursorPos(pos + str.length);
+		this.updateCursorByWordPos();
+		this.onTextareaChanged(null);
+		// console.info("111", newStr, str, pos, oldLength);
+	}
+
 	insertText(str) {
 		var ele = this.getInput();
 
@@ -621,6 +714,7 @@ export default class SimpleMonacoEditor extends Vue {
 		ele.value = tmp.substring(0, startPos) + str + tmp.substr(endPos);
 		nowPos += str.length;
 		this.setTextAreaCursorPos(nowPos);
+		this.updateCursorByWordPos();
 	}
 
 	onMouseup(evt) {

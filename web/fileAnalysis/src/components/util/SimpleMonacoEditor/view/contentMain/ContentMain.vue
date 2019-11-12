@@ -20,7 +20,7 @@ export default ctl;
 	color: #d4d4d4;
 	>.line {
 		display: block;
-		>span { display: inline-block; height: 100%; }
+		>span { display: inline-block; height: 100%; white-space:nowrap; word-break:break-all; }
 	}
 }
 </style>
