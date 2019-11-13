@@ -414,6 +414,15 @@ export default class SimpleMonacoEditor extends Vue {
 	}
 
 	onTextareaCompositionstart(evt) {
+		var isSelect = this.isSelectText();
+		if(!isSelect && this.needSaveHistory(false, -1)) {
+			this.historyCtl.saveHistory();
+		}
+		if(isSelect) {
+			this.removeSelectText();
+		}
+		// console.info(this.cursorWordPos.row, this.cursorWordPos.col);
+
 		var ele = this.getInput();
 		ele.style.height = this.lineHeight + "px";
 		ele.scrollTop = this.lineHeight * this.cursorWordPos.row;
@@ -423,9 +432,18 @@ export default class SimpleMonacoEditor extends Vue {
 	}
 
 	onTextareaCompositionend(evt) {
+		// console.info(evt);
 		this.isIMEStart = false;
 		this.getContFill().setIMEMode(false);
+		// var curPos = this.getCursorTextPos();
+		// this.setTextAreaCursorPos(curPos);
 		this.onTextareaChanged(null);
+		if(evt.data != "") {
+			this.lastInsertKeyCode = -1;
+			this.isLastKeyRemove = false;
+			this.lastChangeString += evt.data;
+			// this.historyCtl.saveHistory();
+		}
 	}
 
 	onTextareaCompositionupdate(evt) {
@@ -523,12 +541,14 @@ export default class SimpleMonacoEditor extends Vue {
 
 		this.setEditorFocus();
 
+		// var line = this.getRow(row);
 		var row = this.getLines().length - 1;
 		var col = this.getRow(row).length;
+		// var pos = line.pos + col;
 		
 		var curRow = this.cursorWordPos.row;
 		var curCol = this.cursorWordPos.col;
-
+		
 		this.markDownPos(evt, row, col, !evt.shiftKey);
 
 		// this.markDownPos(evt, row, col);
@@ -562,6 +582,9 @@ export default class SimpleMonacoEditor extends Vue {
 		this.mouseDownPos.y = evt.pageY;
 		this.downWordPos.row = row;
 		this.downWordPos.col = col;
+
+		// var ele = this.getInput();
+		// ele.selectionStart = ele.selectionEnd = pos;
 		
 		this.historyCtl.saveHistory();
 
@@ -582,7 +605,7 @@ export default class SimpleMonacoEditor extends Vue {
 
 	setSelectRange(_isSelectVer, startRow, startCol, endRow, endCol) {
 		this.isSelectVer = _isSelectVer;
-		console.info("aaa");
+		// console.info("aaa");
 
 		this.selectStartPos.row = startRow;
 		this.selectStartPos.col = startCol;
@@ -715,6 +738,85 @@ export default class SimpleMonacoEditor extends Vue {
 		nowPos += str.length;
 		this.setTextAreaCursorPos(nowPos);
 		this.updateCursorByWordPos();
+	}
+
+	isTab(keyCode) {
+		return this.checkInsert.isTab(keyCode);
+	}
+
+	isChangeHistoryChar(keyCode) {
+		return this.checkInsert.isChangeHistoryChar(keyCode);
+	}
+
+	needSaveHistory(isRemove, keyCode) {
+		// var isRemove = this.editor.checkInsert.isRemove(keyCode);
+		if(this.lastChangeString == "" && this.lastRemoveSelectString == "") {
+			return false;
+		}
+
+		if(this.isTab(this.lastInsertKeyCode)) {
+			return true;
+		}
+
+		var isLastRemove = this.checkInsert.isRemove(this.lastInsertKeyCode);
+		if(!isRemove && !isLastRemove) {
+			if(this.isChangeHistoryChar(keyCode)) {
+				return true;
+			}
+			return false;
+		}
+		if(!isRemove) {
+			return true;
+		}
+
+		return (this.lastInsertKeyCode != keyCode);
+	}
+
+	isSelectText() {
+		var sr = this.selectWordRange;
+		return (sr.startRow != sr.endRow || sr.startCol != sr.endCol);
+	}
+
+	removeSelectText() {
+		if(!this.isSelectText()) {
+			return;
+		}
+		if(this.lastRemoveSelectString != "") {
+			this.historyCtl.saveHistory();
+		}
+		// return;
+
+		var sr = this.selectWordRange;
+		var lines = this.getLines();
+		var len = 0;
+		var str = "";
+		for(var i = sr.startRow; i <= sr.endRow; ++i) {
+			var strLine = lines[i].getLineStr();
+			if(i == sr.startRow && i == sr.endRow) {
+				len = sr.endCol - sr.startCol;
+				str += strLine.substr(sr.startCol, len);
+			} else if(i == sr.startRow) {
+				len += lines[i].length - sr.startCol + 1;
+				str += strLine.substr(sr.startCol) + "\n";
+			} else if(i == sr.endRow) {
+				len += sr.endCol;
+				str += strLine.substr(0, sr.endCol);
+			} else {
+				len += lines[i].length + 1;
+				str += strLine + "\n";
+			}
+		}
+
+		var pos = lines[sr.startRow].pos + sr.startCol;
+		
+		this.lastRemoveSelectString = str;
+		this.lastRemoveSelectStringPos = pos;
+		// console.info(pos, len, JSON.stringify(sr));
+		this.replaceText("", pos, len);
+
+		var row = this.cursorWordPos.row;
+		var col = this.cursorWordPos.col;
+		this.setSelectRange(false, row, col, row, col);
 	}
 
 	onMouseup(evt) {

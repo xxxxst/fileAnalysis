@@ -99,7 +99,7 @@ export default class HistoryCtl {
 		if(this.isChangedText()) {
 			this.saveHistory();
 		}
-		console.info("aaa", JSON.stringify(this.data[0]));
+		// console.info("aaa", JSON.stringify(this.data[0]));
 
 		if(this.data.length <= 0) {
 			return;

@@ -53,13 +53,18 @@ export default class EditorKeyDownCtl {
 		this.evt = _evt;
 		this.editor = _editor;
 
+		if (this.editor.isIMEStart) {
+			return;
+		}
+
 		var ele = this.editor.getInput();
 		// console.info("keydown", ele.selectionStart, ele.selectionEnd);
 		// console.info("keydown", this.evt.keyCode, this.evt.key, this.evt);
 
-		if (this.editor.isIMEStart) {
-			return;
-		}
+		this.startPos = ele.selectionStart;
+		this.totalStrCount = ele.value.length;
+		this.prevent = true;
+		this.scrollRow = this.editor.cursorWordPos.row;
 
 		// readonly
 		if (this.editor.option.readOnly) {
@@ -97,6 +102,10 @@ export default class EditorKeyDownCtl {
 			if(keyCode in this.mapDownCtl) {
 				this.mapDownCtl[keyCode].call(this);
 			}
+			this.editor.scrollToRow(this.scrollRow);
+			if (this.prevent) {
+				this.evt.preventDefault && this.evt.preventDefault();
+			}
 			// this.evt.preventDefault && this.evt.preventDefault();
 			return;
 		}
@@ -104,20 +113,19 @@ export default class EditorKeyDownCtl {
 		var isSelect = this.isSelectText();
 
 		if(isSelect) {
-			this.removeSelectText();
-			if(isRemove) {
-				this.editor.lastInsertKeyCode = keyCode;
-				this.editor.isLastKeyRemove = isRemove;
-				this.editor.cursorHold = true;
-				this.evt.preventDefault && this.evt.preventDefault();
-				return;
-			} else {
-				this.editor.lastChangeString += ch;
-			}
-		} else {
-			this.saveHistory(isRemove, ch, keyCode);
+			this.editor.removeSelectText();
+			// if(isRemove) {
+			// 	this.editor.lastInsertKeyCode = keyCode;
+			// 	this.editor.isLastKeyRemove = isRemove;
+			// 	this.editor.cursorHold = true;
+			// 	this.evt.preventDefault && this.evt.preventDefault();
+			// 	return;
+			// } else {
+			// 	this.editor.lastChangeString += ch;
+			// }
 		}
-
+		
+		this.saveHistory(isRemove, isSelect, ch, keyCode);
 		// if(this.isSelectText()) {
 
 		// }
@@ -132,18 +140,24 @@ export default class EditorKeyDownCtl {
 		// var gap = this.evt.keyCode == 13 ? 1 : 0;
 		// var row = this.cursorWordPos.row + gap;
 
-		this.startPos = ele.selectionStart;
-		this.totalStrCount = ele.value.length;
-		this.prevent = true;
-		this.scrollRow = this.editor.cursorWordPos.row;
-
 		// var scrollRow = this.editor.cursorWordPos.row;
 
-		if(keyCode in this.mapDownCtl) {
-			this.mapDownCtl[keyCode].call(this);
+		if(isSelect && isRemove) {
+			this.prevent = true;
+			this.editor.cursorHold = true;
 		} else {
-			this.onDownOrther();
+			if(keyCode in this.mapDownCtl) {
+				this.mapDownCtl[keyCode].call(this);
+			} else {
+				this.onDownOrther();
+			}
 		}
+
+		// if(keyCode in this.mapDownCtl) {
+		// 	this.mapDownCtl[keyCode].call(this);
+		// } else {
+		// 	this.onDownOrther();
+		// }
 
 		this.editor.scrollToRow(this.scrollRow);
 
@@ -152,87 +166,93 @@ export default class EditorKeyDownCtl {
 		}
 	}
 
-	private removeSelectText() {
-		// if(!this.isSelectText()) {
-		// 	return;
-		// }
-		// return;
+	// private removeSelectText() {
+	// 	// if(!this.isSelectText()) {
+	// 	// 	return;
+	// 	// }
+	// 	// return;
 
-		var sr = this.editor.selectWordRange;
-		var lines = this.editor.getLines();
-		var len = 0;
-		var str = "";
-		for(var i = sr.startRow; i <= sr.endRow; ++i) {
-			var strLine = lines[i].getLineStr();
-			if(i == sr.startRow && i == sr.endRow) {
-				len = sr.endCol - sr.startCol;
-				str += strLine.substr(sr.startCol, len);
-			} else if(i == sr.startRow) {
-				len += lines[i].length - sr.startCol + 1;
-				str += strLine.substr(sr.startCol) + "\n";
-			} else if(i == sr.endRow) {
-				len += sr.endCol;
-				str += strLine.substr(0, sr.endCol);
-			} else {
-				len += lines[i].length + 1;
-				str += strLine + "\n";
-			}
-		}
+	// 	var sr = this.editor.selectWordRange;
+	// 	var lines = this.editor.getLines();
+	// 	var len = 0;
+	// 	var str = "";
+	// 	for(var i = sr.startRow; i <= sr.endRow; ++i) {
+	// 		var strLine = lines[i].getLineStr();
+	// 		if(i == sr.startRow && i == sr.endRow) {
+	// 			len = sr.endCol - sr.startCol;
+	// 			str += strLine.substr(sr.startCol, len);
+	// 		} else if(i == sr.startRow) {
+	// 			len += lines[i].length - sr.startCol + 1;
+	// 			str += strLine.substr(sr.startCol) + "\n";
+	// 		} else if(i == sr.endRow) {
+	// 			len += sr.endCol;
+	// 			str += strLine.substr(0, sr.endCol);
+	// 		} else {
+	// 			len += lines[i].length + 1;
+	// 			str += strLine + "\n";
+	// 		}
+	// 	}
 
-		var pos = lines[sr.startRow].pos + sr.startCol;
+	// 	var pos = lines[sr.startRow].pos + sr.startCol;
 		
-		this.editor.lastRemoveSelectString = str;
-		this.editor.lastRemoveSelectStringPos = pos;
-		// console.info(pos, len, JSON.stringify(sr));
-		this.editor.replaceText("", pos, len);
+	// 	this.editor.lastRemoveSelectString = str;
+	// 	this.editor.lastRemoveSelectStringPos = pos;
+	// 	// console.info(pos, len, JSON.stringify(sr));
+	// 	this.editor.replaceText("", pos, len);
 
-		this.editor.setSelectRange(false, 0, 0, 0, 0);
-	}
+	// 	this.editor.setSelectRange(false, 0, 0, 0, 0);
+	// }
 
-	private isChangeHistoryChar(keyCode) {
-		return this.editor.checkInsert.isChangeHistoryChar(keyCode);
-	}
+	// private isChangeHistoryChar(keyCode) {
+	// 	return this.editor.checkInsert.isChangeHistoryChar(keyCode);
+	// }
 
-	private isTab(keyCode) {
-		return this.editor.checkInsert.isTab(keyCode);
-	}
+	// private isTab(keyCode) {
+	// 	return this.editor.checkInsert.isTab(keyCode);
+	// }
 
-	private isEnter(keyCode) {
-		return this.editor.checkInsert.isEnter(keyCode);
-	}
+	// private isEnter(keyCode) {
+	// 	return this.editor.checkInsert.isEnter(keyCode);
+	// }
 
-	private needSaveHistory(isRemove, keyCode) {
-		// var isRemove = this.editor.checkInsert.isRemove(keyCode);
-		if(this.editor.lastChangeString == "" && this.editor.lastRemoveSelectString == "") {
-			return false;
-		}
+	// private needSaveHistory(isRemove, keyCode) {
+	// 	// var isRemove = this.editor.checkInsert.isRemove(keyCode);
+	// 	if(this.editor.lastChangeString == "" && this.editor.lastRemoveSelectString == "") {
+	// 		return false;
+	// 	}
 
-		if(this.isTab(this.editor.lastInsertKeyCode)) {
-			return true;
-		}
+	// 	if(this.isTab(this.editor.lastInsertKeyCode)) {
+	// 		return true;
+	// 	}
 
-		var isLastRemove = this.editor.checkInsert.isRemove(this.editor.lastInsertKeyCode);
-		if(!isRemove && !isLastRemove) {
-			if(this.isChangeHistoryChar(keyCode)) {
-				return true;
-			}
-			return false;
-		}
-		if(!isRemove) {
-			return true;
-		}
+	// 	var isLastRemove = this.editor.checkInsert.isRemove(this.editor.lastInsertKeyCode);
+	// 	if(!isRemove && !isLastRemove) {
+	// 		if(this.isChangeHistoryChar(keyCode)) {
+	// 			return true;
+	// 		}
+	// 		return false;
+	// 	}
+	// 	if(!isRemove) {
+	// 		return true;
+	// 	}
 
-		return (this.editor.lastInsertKeyCode != keyCode);
-	}
+	// 	return (this.editor.lastInsertKeyCode != keyCode);
+	// }
 
-	private saveHistory(isRemove, chInsert, keyCode) {
-		if(this.needSaveHistory(isRemove, keyCode)) {
+	private saveHistory(isRemove, isSelect, chInsert, keyCode) {
+		if(!isSelect && this.editor.needSaveHistory(isRemove, keyCode)) {
 			this.editor.historyCtl.saveHistory();
 		}
 
 		// console.info("111", isRemove, this.editor.lastChangeString);
 
-		if(isRemove) {
+		if(isSelect && isRemove) {
+			return;
+		} else if(isRemove) {
+			// if(isSelect) {
+			// 	this.prevent = true;
+			// 	return;
+			// }
 			var isDel = this.editor.checkInsert.isDelete(keyCode);
 			var delChar = this.editor.getCursorText(isDel);
 			if(isDel) {
@@ -282,6 +302,7 @@ export default class EditorKeyDownCtl {
 	}
 
 	private onDownLeft() {
+		// console.info(this.startPos, this.editor.getInput().selectionEnd);
 		if (this.startPos > 0) {
 			this.editor.cursorHold = true;
 			// ele.selectionStart = ele.selectionEnd = startPos - 1;
