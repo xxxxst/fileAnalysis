@@ -19,6 +19,7 @@ import CheckInsert from 'src/components/util/SimpleMonacoEditor/control/CheckIns
 import ComEditCtl from 'src/components/util/SimpleMonacoEditor/control/ComEditCtl';
 import EditorKeyDownCtl from 'src/components/util/SimpleMonacoEditor/control/EditorKeyDownCtl';
 import HistoryCtl from 'src/components/util/SimpleMonacoEditor/control/HistoryCtl';
+import CacheText from 'src/components/util/SimpleMonacoEditor/control/CacheText';
 
 @Component({ components: { ContentBack, ContentMain, ContentFill, Scrollbar, LineNumberBox } })
 export default class SimpleMonacoEditor extends Vue {
@@ -40,6 +41,9 @@ export default class SimpleMonacoEditor extends Vue {
 	keyDownCtl = new EditorKeyDownCtl();
 	@VIgnore()
 	historyCtl = new HistoryCtl();
+
+	@VIgnore()
+	cacheText = new CacheText();
 
 	verSlbMd = new ScrollbarMd();
 	horSlbMd = new ScrollbarMd();
@@ -252,6 +256,22 @@ export default class SimpleMonacoEditor extends Vue {
 	}
 
 	setValue(str) {
+		this.cacheText.setValue(str);
+		console.info(0, this.cacheText.findRowByPos(1)	, 0, this.cacheText.findColByPos(0, 0));
+		console.info(0, this.cacheText.findRowByPos(15)	, 15, this.cacheText.findColByPos(0, 15));
+		console.info(1, this.cacheText.findRowByPos(16)	, 8, this.cacheText.findColByPos(0, 8));
+		console.info(2, this.cacheText.findRowByPos(19)	, 0, this.cacheText.findColByPos(1, 16));
+		console.info(2, this.cacheText.findRowByPos(17)	, 0, this.cacheText.findColByPos(0, 0));
+		console.info(2, this.cacheText.findRowByPos(25)	, 0, this.cacheText.findColByPos(0, 0));
+		console.info(3, this.cacheText.findRowByPos(26)	, 0, this.cacheText.findColByPos(0, 0));
+		console.info(4, this.cacheText.findRowByPos(27)	, 0, this.cacheText.findColByPos(0, 0));
+		console.info(4, this.cacheText.findRowByPos(55)	, 0, this.cacheText.findColByPos(0, 0));
+		console.info(5, this.cacheText.findRowByPos(56)	, 0, this.cacheText.findColByPos(0, 0));
+		console.info(0, this.cacheText.findRowByPos(0)	, 0, this.cacheText.findColByPos(0, 0));
+		console.info(6, this.cacheText.findRowByPos(80)	, 0, this.cacheText.findColByPos(0, 0));
+		console.info(6, this.cacheText.findRowByPos(999), 0, this.cacheText.findColByPos(0, 0));
+		console.info(0, this.cacheText.findRowByPos(-10), 0, this.cacheText.findColByPos(0, 0));
+
 		var ele = this.getInput();
 		ele.value = str;
 		this.onTextareaChanged(null);
