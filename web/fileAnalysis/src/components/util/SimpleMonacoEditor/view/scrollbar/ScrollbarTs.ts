@@ -138,7 +138,13 @@ export default class Scrollbar extends Vue {
 	updatePosByDrag(x, y) {
 		var md = this.model;
 		var ele = this.$el as HTMLDivElement;
-		var canMovePx = ele.clientHeight * (1 - this.model.contentSize/100);
+		var canMovePx = 0;
+		if(this.model.isVertical) {
+			canMovePx = ele.clientHeight * (1 - this.model.contentSize/100);
+		} else {
+			canMovePx = ele.clientWidth * (1 - this.model.contentSize/100);
+		}
+
 		// console.info(canMovePx);
 		if(canMovePx <= 0) {
 			return;

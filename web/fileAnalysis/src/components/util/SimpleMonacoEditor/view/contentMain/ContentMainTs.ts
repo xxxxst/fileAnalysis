@@ -10,6 +10,13 @@ import { TextLine } from 'src/components/util/SimpleMonacoEditor/model/TextLine'
 export default class ContentMain extends Vue {
 	lines: TextLine[] = [new TextLine()];
 
+	outWidth = 50;
+	maxSingleWordWidth = 0;
+
+	rootStyle = new class {
+		width = "";
+	}
+
 	lineStyle = new class {
 		height = "19px";
 		lineHeight = "19px";
@@ -31,10 +38,27 @@ export default class ContentMain extends Vue {
 		
 	}
 
+	updateWidth() {
+		var editor = this.getEditor();
+		if(!editor) {
+			return;
+		}
+		var width = this.maxSingleWordWidth * editor.charWidth + this.outWidth;
+		this.rootStyle.width = width + "px";
+	}
+
 	updateFontSize(fontSize, lineHeight) {
 		var strH = lineHeight + "px";
 		this.lineStyle.height = strH;
 		this.lineStyle.lineHeight = this.lineStyle.height;
+	}
+
+	calcMaxSingleWordWidth() {
+		var rst = 0;
+		for (var i = 0; i < this.lines.length; ++i) {
+			rst = Math.max(rst, this.lines[i].singleWordLength);
+		}
+		return rst;
 	}
 
 	formatText(str) {
@@ -50,6 +74,9 @@ export default class ContentMain extends Vue {
 
 	updateText(str) {
 		this.lines = this.formatText(str);
+		
+		this.maxSingleWordWidth = this.calcMaxSingleWordWidth();
+		this.updateWidth();
 	}
 
 	onContentBoxMouseDownMainArea(evt:MouseEvent) {

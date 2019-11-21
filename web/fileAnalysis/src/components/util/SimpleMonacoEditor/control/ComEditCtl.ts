@@ -82,11 +82,11 @@ export default class ComEditCtl {
 			line.data.push(md);
 
 			line.length = md.value.length;
-			line.singleWordLength = md.singleWordLength;
+			line.singleWordLength += md.singleWordLength;
 
 			rst.push(line);
 
-			pos += arr[i].length
+			pos += arr[i].length;
 		}
 
 		return rst;

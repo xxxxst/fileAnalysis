@@ -176,7 +176,7 @@ export default class Home extends Vue {
 			provideCompletionItems(model, position, context, token) {
 				var str = model.getLineContent(position.lineNumber).substr(0, position.column-1);
 				if(/\s/.test(str)) {
-					return { suggestions:[] };
+					return { suggestions:[{ label:"", insertText:"", detail: ''}] };
 				}
 
 				var arrRst = [];
@@ -195,7 +195,10 @@ export default class Home extends Vue {
 					}
 					arrRst.push({ label:key, insertText:key, detail: '' });
 				}
-				// console.info(arrRst);
+
+				if(arrRst.length == 0) {
+					arrRst.push({ label:"", insertText:"", detail: ''});
+				}
 
 				return { suggestions: arrRst };
 

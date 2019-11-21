@@ -1,6 +1,6 @@
 <template>
 
-<div class="sm-scrollbar">
+<div class="sm-scrollbar" :style="{borderLeft:model.isVertical?'1px solid rgba(136, 136, 136, 0.5)':''}">
 	<div class="content" :style="contentStyle" :class="{'content-over':model.isMouseOver,'content-hover':isDown}" @mousedown="onMousedown($event)"></div>
 </div>
 </template>
@@ -13,7 +13,7 @@ export default ctl;
 <style lang="scss">
 
 .sm-scrollbar {
-	position: relative; border-left: 1px solid rgba(136, 136, 136, 0.5);
+	position: relative;
 
 	>.content {
 		position: absolute; display: inline-block;

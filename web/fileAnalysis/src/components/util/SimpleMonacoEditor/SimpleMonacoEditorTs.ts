@@ -19,7 +19,6 @@ import CheckInsert from 'src/components/util/SimpleMonacoEditor/control/CheckIns
 import ComEditCtl from 'src/components/util/SimpleMonacoEditor/control/ComEditCtl';
 import EditorKeyDownCtl from 'src/components/util/SimpleMonacoEditor/control/EditorKeyDownCtl';
 import HistoryCtl from 'src/components/util/SimpleMonacoEditor/control/HistoryCtl';
-import CacheText from 'src/components/util/SimpleMonacoEditor/control/CacheText';
 
 @Component({ components: { ContentBack, ContentMain, ContentFill, Scrollbar, LineNumberBox } })
 export default class SimpleMonacoEditor extends Vue {
@@ -42,8 +41,8 @@ export default class SimpleMonacoEditor extends Vue {
 	@VIgnore()
 	historyCtl = new HistoryCtl();
 
-	@VIgnore()
-	cacheText = new CacheText();
+	// @VIgnore()
+	// cacheText = new CacheText();
 
 	verSlbMd = new ScrollbarMd();
 	horSlbMd = new ScrollbarMd();
@@ -62,6 +61,10 @@ export default class SimpleMonacoEditor extends Vue {
 		top = "0";
 	};
 
+	editBoxStyle = new class {
+		left = "0";
+	}
+
 	charWidth = 7;
 	lineHeight = 19;
 	needTestCharWidth = false;
@@ -77,6 +80,8 @@ export default class SimpleMonacoEditor extends Vue {
 	contentPos = { x: 0, y: 0 };
 	cursorHold = false;
 	isIMEStart = false;
+
+	maxSingleWordWidth = 0;
 
 	keepCacheCursorSingleWordCol = false;
 	cacheCursorSingleWordCol = 0;
@@ -139,10 +144,15 @@ export default class SimpleMonacoEditor extends Vue {
 	}
 
 	onHorScrollbarChanging(val) {
-		var ele = this.$refs.contentBox as HTMLDivElement;
-		var width = ele.clientWidth;
-		this.contentPos.x = -width * (100 - this.horSlbMd.contentSize) / 100 * (val / 100);
-		this.contentStyle.left = this.contentPos.x + "px";
+		// var ele = this.$refs.contentBox as HTMLDivElement;
+		// var width = ele.clientWidth;
+		// this.contentPos.x = -width * (100 - this.horSlbMd.contentSize) / 100 * (val / 100);
+		// this.contentStyle.left = this.contentPos.x + "px";
+
+		// var ele = this.$refs.editBox as HTMLDivElement;
+		// var width = ele.clientWidth;
+		this.contentPos.x = -val;
+		this.editBoxStyle.left = this.contentPos.x + "px";
 	}
 
 	updateOptions(opt: EditorOption) {
@@ -236,6 +246,7 @@ export default class SimpleMonacoEditor extends Vue {
 
 	layout() {
 		this.updateVerSlbSize();
+		this.updateHorSlbSize();
 
 		if (this.needTestCharWidth) {
 			this.needTestCharWidth = false;
@@ -256,21 +267,25 @@ export default class SimpleMonacoEditor extends Vue {
 	}
 
 	setValue(str) {
-		this.cacheText.setValue(str);
-		console.info(0, this.cacheText.findRowByPos(1)	, 0, this.cacheText.findColByPos(0, 0));
-		console.info(0, this.cacheText.findRowByPos(15)	, 15, this.cacheText.findColByPos(0, 15));
-		console.info(1, this.cacheText.findRowByPos(16)	, 8, this.cacheText.findColByPos(0, 8));
-		console.info(2, this.cacheText.findRowByPos(19)	, 0, this.cacheText.findColByPos(1, 16));
-		console.info(2, this.cacheText.findRowByPos(17)	, 0, this.cacheText.findColByPos(0, 0));
-		console.info(2, this.cacheText.findRowByPos(25)	, 0, this.cacheText.findColByPos(0, 0));
-		console.info(3, this.cacheText.findRowByPos(26)	, 0, this.cacheText.findColByPos(0, 0));
-		console.info(4, this.cacheText.findRowByPos(27)	, 0, this.cacheText.findColByPos(0, 0));
-		console.info(4, this.cacheText.findRowByPos(55)	, 0, this.cacheText.findColByPos(0, 0));
-		console.info(5, this.cacheText.findRowByPos(56)	, 0, this.cacheText.findColByPos(0, 0));
-		console.info(0, this.cacheText.findRowByPos(0)	, 0, this.cacheText.findColByPos(0, 0));
-		console.info(6, this.cacheText.findRowByPos(80)	, 0, this.cacheText.findColByPos(0, 0));
-		console.info(6, this.cacheText.findRowByPos(999), 0, this.cacheText.findColByPos(0, 0));
-		console.info(0, this.cacheText.findRowByPos(-10), 0, this.cacheText.findColByPos(0, 0));
+		// this.cacheText.setValue(str);
+		// var aaa = "";
+		// for(var i = 0; i < 6; ++i) {
+		// 	for(var j = 0; j < 4; ++j) {
+		// 		var ch = String.fromCharCode('a'.charCodeAt(0) + (i*4 + j));
+		// 		aaa += ch+ch+ch+ch+ch;
+		// 	}
+		// 	if(i != 5) {
+		// 		aaa+="\r\n";
+		// 	}
+		// }
+		// this.cacheText.setValue(aaa);
+		// console.info(111, this.cacheText.substr(0, -1));
+		// console.info(111, this.cacheText.substr(21, 5));
+		// console.info(111, this.cacheText.substr(42, 8));
+		// console.info(111, this.cacheText.substr(63, 46));
+		// console.info(111, this.cacheText.substr(84, 25));
+		// console.info(111, this.cacheText.substr(105, 20));
+		// console.info(111, this.cacheText.substr(125, 20));
 
 		var ele = this.getInput();
 		ele.value = str;
@@ -288,26 +303,37 @@ export default class SimpleMonacoEditor extends Vue {
 		var ele = this.getInput();
 		var startPos = ele.selectionStart;
 		// console.info(startPos);
-		var val = ele.value.replace(/\r\n/g, "\n");
-		var arr = val.split("\n");
+		// var val = ele.value.replace(/\r\n/g, "\n");
+		// var arr = val.split("\n");
 		var tmpLen = 0;
 		var row = 0;
 		var col = 0;
 		// var str = "";
-		for (var i = 0; i < arr.length; ++i) {
-			if (tmpLen + arr[i].length + i >= startPos) {
+		// for (var i = 0; i < arr.length; ++i) {
+		// 	if (tmpLen + arr[i].length + i >= startPos) {
+		// 		row = i;
+		// 		col = startPos - tmpLen - i;
+		// 		// str = arr[i].substr(0, col);
+		// 		break;
+		// 	}
+		// 	tmpLen += arr[i].length;
+		// }
+
+		var lines = this.getLines();
+		for (var i = 0; i < lines.length; ++i) {
+			if (tmpLen + lines[i].length + i >= startPos) {
 				row = i;
 				col = startPos - tmpLen - i;
 				// str = arr[i].substr(0, col);
 				break;
 			}
-			tmpLen += arr[i].length;
+			tmpLen += lines[i].length;
 		}
 
-		if (arr.length != this.totalRow) {
-			this.totalRow = arr.length;
-			this.udpateTotalRow();
-		}
+		// if (arr.length != this.totalRow) {
+		// 	this.totalRow = arr.length;
+		// 	this.udpateTotalRow();
+		// }
 
 		this.cursorWordPos.col = col;
 		if (row != this.cursorWordPos.row) {
@@ -316,7 +342,7 @@ export default class SimpleMonacoEditor extends Vue {
 			this.getContBack().updateSelectRow();
 		}
 
-		var xsize = this.calcTextLen(arr[row].substr(0, col));
+		var xsize = this.calcTextLen(lines[row].getLineStr().substr(0, col));
 		if (!this.keepCacheCursorSingleWordCol) {
 			this.cacheCursorSingleWordCol = xsize;
 		}
@@ -343,11 +369,28 @@ export default class SimpleMonacoEditor extends Vue {
 		this.verSlbMd.count = count;
 	}
 
+	updateHorSlbSize() {
+		// var width = this.getContentWidth();
+		var width = this.getEditContentWidth();
+		var count = this.maxSingleWordWidth * this.charWidth - width + this.getContMain().outWidth;
+		if(count < 0) {
+			count = 0;
+		}
+		var widthPx = width / ( width + count) * 100;
+		if(isNaN(widthPx)) {
+			widthPx = 0;
+		}
+		// console.info(this.maxSingleWordWidth, widthPx, width, count);
+		this.horSlbMd.contentSize = widthPx;
+		this.horSlbMd.count = count;
+		// console.info(width, count, this.horSlbMd.contentSize, this.horSlbMd.count, this.getLines());
+	}
+
 	udpateTotalRow() {
 		this.updateLineNoRow();
 		this.updateVerSlbSize();
 
-		this.limitScroll();
+		this.limitVerScroll();
 	}
 
 	updateLineNoRow() {
@@ -374,11 +417,34 @@ export default class SimpleMonacoEditor extends Vue {
 	// 	return this.comCtl.formatText(str, space, count);
 	// }
 
+	calcMaxSingleWordWidth() {
+		var lines = this.getLines();
+		var rst = 0;
+		for (var i = 0; i < lines.length; ++i) {
+			rst = Math.max(rst, lines[i].singleWordLength);
+		}
+		return rst;
+	}
+
 	onTextareaChanged(evt) {
 		var ele = this.getInput();
 		var val = ele.value;
 		// this.lines = this.formatText(val);
 		this.getContMain().updateText(val);
+
+		var newTotalRow = this.getLines().length;
+		if(newTotalRow != this.totalRow) {
+			this.totalRow = newTotalRow;
+			this.udpateTotalRow();
+		}
+
+		var newMaxSingleWordPos = this.getContMain().maxSingleWordWidth;
+		// console.info(newMaxSingleWordPos, this.maxSingleWordWidth);
+		if(newMaxSingleWordPos != this.maxSingleWordWidth) {
+			this.maxSingleWordWidth = newMaxSingleWordPos;
+			this.updateHorSlbSize();
+			this.limitHorScroll();
+		}
 		
 		if (!this.isIMEStart) {
 			this.updateCursorByWordPos();
@@ -401,7 +467,17 @@ export default class SimpleMonacoEditor extends Vue {
 		return ele.clientHeight;
 	}
 
-	limitScroll() {
+	getContentWidth() {
+		var ele = this.$refs.contentBox as HTMLDivElement;
+		return ele.clientWidth;
+	}
+
+	getEditContentWidth() {
+		var ele = this.$refs.editContent as HTMLDivElement;
+		return ele.clientWidth;
+	}
+
+	limitVerScroll() {
 		var rowHeight = (this.totalRow - 1) * this.lineHeight;
 		var pos = this.contentPos.y + rowHeight;
 		if (pos < 0) {
@@ -410,6 +486,21 @@ export default class SimpleMonacoEditor extends Vue {
 			var oldValue = ele.getValue();
 			if (val == oldValue) {
 				this.onVerScrollbarChanging(val);
+			} else {
+				ele.setValue(val);
+			}
+		}
+	}
+
+	limitHorScroll() {
+		var rowWidth = (this.maxSingleWordWidth - 1) * this.charWidth;
+		var pos = this.contentPos.x + rowWidth;
+		if (pos < 0) {
+			var val = this.pxToScrollVal(false, rowWidth);
+			var ele = this.$refs.slbHor as IScrollbar;
+			var oldValue = ele.getValue();
+			if (val == oldValue) {
+				this.onHorScrollbarChanging(val);
 			} else {
 				ele.setValue(val);
 			}
@@ -554,6 +645,11 @@ export default class SimpleMonacoEditor extends Vue {
 	}
 
 	onContentBoxMouseDownMask(evt:MouseEvent) {
+		// if(evt.target != this.$refs.editContent) {
+		// 	return;
+		// }
+		// console.info(evt.target);
+		// return;
 		// right mouse down
 		if(evt.button == 2) {
 			return;
@@ -845,6 +941,7 @@ export default class SimpleMonacoEditor extends Vue {
 
 	pxToScrollVal(isVer, pxVal) {
 		return pxVal;
+
 		if (isVer) {
 			if (this.totalRow <= 1) {
 				return 0;
@@ -868,12 +965,14 @@ export default class SimpleMonacoEditor extends Vue {
 
 	onMousewheel(evt) {
 		var val = evt.wheelDelta;
+		
+		var scrollVal = this.pxToScrollVal(true, 125) * (val > 0 ? -1 : 1);
 
 		if (evt.shiftKey) {
+			var ele = this.$refs.slbHor as IScrollbar;
+			ele.setValue(ele.getValue() + scrollVal);
 			return;
 		}
-
-		var scrollVal = this.pxToScrollVal(true, 125) * (val > 0 ? -1 : 1);
 
 		var ele = this.$refs.slbVer as IScrollbar;
 		ele.setValue(ele.getValue() + scrollVal);
