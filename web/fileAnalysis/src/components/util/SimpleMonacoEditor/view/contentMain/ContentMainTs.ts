@@ -105,7 +105,7 @@ export default class ContentMain extends Vue {
 		if (isNaN(startCol)) {
 			col = line.length;
 		} else {
-			var px = evt.layerX;
+			var px = evt.offsetX;
 			col = editor.calcPos(line.getLineStr(), px);
 		}
 		pos = line.pos + col;

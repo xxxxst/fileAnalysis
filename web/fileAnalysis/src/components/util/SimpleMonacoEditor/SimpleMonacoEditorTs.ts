@@ -493,7 +493,9 @@ export default class SimpleMonacoEditor extends Vue {
 	}
 
 	limitHorScroll() {
-		var rowWidth = (this.maxSingleWordWidth - 1) * this.charWidth;
+		var outWidth = this.getContMain().outWidth;
+		var width = this.getEditContentWidth();
+		var rowWidth = this.maxSingleWordWidth * this.charWidth + outWidth - width;
 		var pos = this.contentPos.x + rowWidth;
 		if (pos < 0) {
 			var val = this.pxToScrollVal(false, rowWidth);
@@ -519,6 +521,24 @@ export default class SimpleMonacoEditor extends Vue {
 			ele.setValue(val);
 		} else if (pos < 0) {
 			var val = this.pxToScrollVal(true, rowHeight);
+			var ele = this.$refs.slbVer as IScrollbar;
+			ele.setValue(val);
+		}
+	}
+
+	scrollToCol(singleWordCol) {
+		var outWidth = this.getContMain().outWidth;
+		var width = this.getEditContentWidth();
+
+		var rowWidth = singleWordCol * this.charWidth;
+		var pos = this.contentPos.x + rowWidth;
+		
+		if (pos + this.lineHeight * 2 >= width) {
+			var val = this.pxToScrollVal(true, rowWidth + this.lineHeight * 2 - width);
+			var ele = this.$refs.slbVer as IScrollbar;
+			ele.setValue(val);
+		} else if (pos < 0) {
+			var val = this.pxToScrollVal(true, rowWidth);
 			var ele = this.$refs.slbVer as IScrollbar;
 			ele.setValue(val);
 		}
