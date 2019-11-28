@@ -1,7 +1,7 @@
 
 export default class FileCache {
 	file: Blob = null;
-	sliceCount = 1024;
+	sliceCount = 10240;
 
 	mapCache = {};
 

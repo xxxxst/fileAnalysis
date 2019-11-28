@@ -1,5 +1,5 @@
 <template>
-<div class="hex-view" ref="dragFileBox">
+<div class="hex-view" ref="dragFileBox" @mousewheel="onMousewheel($event)">
 	<div class="hex-content" v-show="!isWaitFile">
 		<div class="table-box">
 			<table>
@@ -48,9 +48,10 @@
 			</table>
 		</div>
 
-		<div class="scrollbar">
+		<!-- <div class="scrollbar">
 			<div class="btn"></div>
-		</div>
+		</div> -->
+		<HexViewScrollbar ref="slbVer" :model="slbMd"/>
 
 	</div>
 	<div class="no-file-box" v-show="isWaitFile">

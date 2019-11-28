@@ -341,6 +341,7 @@ export default class SimpleMonacoEditor extends Vue {
 			// this.updateSelectRow();
 			this.getContBack().updateSelectRow();
 		}
+		this.scrollCusorToView();
 
 		var xsize = this.calcTextLen(lines[row].getLineStr().substr(0, col));
 		if (!this.keepCacheCursorSingleWordCol) {
@@ -509,6 +510,14 @@ export default class SimpleMonacoEditor extends Vue {
 		}
 	}
 
+	scrollCusorToView() {
+		var row = this.cursorWordPos.row;
+		var col = this.cursorWordPos.col;
+		var singleWordCol = this.calcTextLen(this.getRowText(row).substr(0, col));
+		this.scrollToRow(row);
+		this.scrollToCol(singleWordCol);
+	}
+
 	scrollToRow(row) {
 		var height = this.getContentHeight();
 
@@ -527,19 +536,20 @@ export default class SimpleMonacoEditor extends Vue {
 	}
 
 	scrollToCol(singleWordCol) {
-		var outWidth = this.getContMain().outWidth;
+		// var halfOutWidth = this.getContMain().outWidth / 2;
+		var halfOutWidth = this.getContMain().outWidth *(3/5);
 		var width = this.getEditContentWidth();
 
 		var rowWidth = singleWordCol * this.charWidth;
 		var pos = this.contentPos.x + rowWidth;
 		
-		if (pos + this.lineHeight * 2 >= width) {
-			var val = this.pxToScrollVal(true, rowWidth + this.lineHeight * 2 - width);
-			var ele = this.$refs.slbVer as IScrollbar;
+		if (pos >= width - halfOutWidth) {
+			var val = this.pxToScrollVal(false, rowWidth - (width - halfOutWidth));
+			var ele = this.$refs.slbHor as IScrollbar;
 			ele.setValue(val);
 		} else if (pos < 0) {
-			var val = this.pxToScrollVal(true, rowWidth);
-			var ele = this.$refs.slbVer as IScrollbar;
+			var val = this.pxToScrollVal(false, rowWidth);
+			var ele = this.$refs.slbHor as IScrollbar;
 			ele.setValue(val);
 		}
 	}

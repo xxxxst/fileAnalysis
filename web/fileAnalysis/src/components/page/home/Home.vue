@@ -27,30 +27,46 @@
 			</div>
 			<div class="title">{{selectStructInfo.name}}</div>
 			<div class="right-box">
-				<!-- <img class="btn" src="static/image/add.png" alt=""> -->
 				<div class="lbl-btn" :class="{'select':isShowStructView}" title="view struct" @click="onClickShowHideStructView()">C</div>
 			</div>
 		</div>
-		<div class="tree-content" v-show="!isShowStructView">
-			<!-- <div class="item root">* root</div> -->
+		<!-- <div class="tree-content" v-show="!isShowStructView">
 			<div class="item" v-for="(it,idx) in selectStructInfo.routes" :key="idx" :class="{'select':selectRootStruct===it}" @click="onClickRootStruct(it)">{{it.name + ((selectRootStruct===it&&editText!=originText) ? ' *':'')}}</div>
+		</div> -->
+		<div class="tree-content">
+			<div class="ctl-box">
+				<div class="btn" @click="onClickAddressBtn()">address</div>
+			</div>
+
+			<div class="item" v-for="(it,idx) in selectStructInfo.structs" v-show="!isShowStructView" :key="'a'+idx" :class="{'select':selectStruct===it}" @click="onClickStruct(it)">{{it.name + ((selectStruct===it&&editText!=originText) ? ' *':'')}}</div>
+
+			<div class="item" v-for="(it,idx) in selectStructInfo.structs" v-show="isShowStructView" :key="'b'+idx" :class="{'select':selectStruct===it}" @click="onClickStruct(it)">{{it.name + ((selectStruct===it&&editText!=originText) ? ' *':'')}}</div>
+
 		</div>
-		<div class="tree-content" v-show="isShowStructView">
+		<!-- <div class="tree-content" v-show="isShowStructView">
 			<div class="item" v-for="(it,idx) in selectStructInfo.structs" :key="idx" :class="{'select':selectStruct===it}" @click="onClickStruct(it)">{{it.name + ((selectStruct===it&&editText!=originText) ? ' *':'')}}</div>
-		</div>
+		</div> -->
 	</div>
 
 	<div class="map-box">
-
+		<MapPreview :data="arrSelectStruct"/>
 	</div>
 	
 	<div class="hex-box">
-		<HexView/>
+		<HexView ref="hexView"/>
 	</div>
 
 	<div class="config-box">
-		<div class="text-edit" ref="textEdit"/>
-		<SimpleMonacoEditor class="text-edit" ref="smEditor"/>
+		<div class="title">
+			<div class="lbl">{{selectStructName}}</div>
+			<div class="btn-box">
+				<div class="btn" title="help">?</div>
+			</div>
+		</div>
+		<div class="content">
+			<div class="text-edit" ref="textEdit"/>
+		</div>
+		<!-- <SimpleMonacoEditor class="text-edit" ref="smEditor"/> -->
 	</div>
 
 	<div class="bottom-box">
@@ -122,22 +138,29 @@ export default ctl;
 		}
 		>.content {
 			>.item {
-				cursor: pointer; height: 36px; line-height: 36px; padding-left: 5px;
+				cursor: pointer; height: 36px; line-height: 36px; padding-left: 5px; font-size: 14px;
 				&:hover { background: #e4e4e4; }
 			}
 		}
 		>.tree-content {
-			>.root { height: 28px; line-height: 28px; padding-left: 5px; background: #f5f5f5; }
+			>.root { height: 24px; line-height: 24px; padding-left: 5px; background: #f5f5f5; }
+			>.ctl-box {
+				height: 24px; line-height: 22px; border-bottom: 1px solid #acacac; @extend %ex-one-line;
+				>.btn {
+					cursor: default; display: inline-block; height: 100%; padding: 0 6px; font-size: 12px; vertical-align: top;
+					&:hover { background: #e4e4e4; }
+				}
+			}
 			>.item {
-				cursor: pointer; height: 28px; line-height: 28px; padding-left: 5px;
+				cursor: pointer; height: 24px; line-height: 24px; padding-left: 5px; font-size: 12px;
 				&:hover { background: #cfcfcf; }
 			}
-				>.select { background: #e4e4e4; }
+			.select { background: #e4e4e4; }
 		}
 	}
 
 	>.map-box {
-		position: absolute; background: #fff; top: 60px; left: 200px; width: 658px; bottom: 335px;
+		position: absolute; background: #fff; top: 60px; left: 200px; width: 658px; bottom: 335px; overflow: auto; @include scrollbar(4px);
 	}
 
 	>.hex-box {
@@ -146,7 +169,20 @@ export default ctl;
 	
 	>.config-box {
 		position: absolute; background: #fff; top: 60px; right: 0; left: 200px+658px; bottom: 25px; border-left: 1px solid #acacac;
-		.text-edit { width: 100%; height: 49%; margin-bottom: 4px; overflow: hidden; }
+		>.title {
+			position: relative; height: 28px; width: 100%; background: #252526;
+			>.lbl { display: inline-block; height: 28px; line-height: 28px; padding-left: 8px; font-size: 14px; color: #fff; }
+			>.btn-box {
+				position: absolute; right: 0; top: 0; height: 20px;
+				>.btn { cursor: pointer; display: inline-block; border: 1px solid #bbb; width: 18px; height: 18px; margin-top: 5px; margin-right: 5px; line-height: 16px; font-size: 12px; color: #bbb; text-align: center; vertical-align: top; }
+				>.btn:hover { border: 1px solid #fff; }
+				>.select { border: 1px solid #fff; color: #fff; }
+			}
+		}
+		>.content {
+			position: absolute; left: 0; top: 28px; bottom: 0; width: 100%;
+			.text-edit { width: 100%; height: 100%; overflow: hidden; }
+		}
 	}
 
 	>.bottom-box {

@@ -6,6 +6,7 @@ const merge = require('webpack-merge');
 const baseWebpack = require('./webpack.base');
 const util = require('./util');
 const conf = require('./conf');
+const proxy = require('http-proxy-middleware');
 
 const host = process.env.HOST || conf.dev.host;
 const port = (process.env.PORT && Number(process.env.PORT)) || conf.dev.port;
@@ -57,7 +58,7 @@ const webpackConfig = merge(baseWebpack, {
 			warnings: false,
 			errors: true
 		},
-		proxy: conf.dev.proxyTable,
+		// proxy: conf.dev.proxyTable,
 		publicPath: "/",
 		quiet: true,
 		watchOptions: {
@@ -67,6 +68,10 @@ const webpackConfig = merge(baseWebpack, {
 			"Access-Control-Allow-Origin": "*"
 		},
 		setup(app) {
+			for(var key in conf.dev.proxyTable) {
+				app.use(proxy(key, conf.dev.proxyTable[key]));
+			}
+
 			var bodyParser = require('body-parser');
 			app.use(bodyParser.json());
 

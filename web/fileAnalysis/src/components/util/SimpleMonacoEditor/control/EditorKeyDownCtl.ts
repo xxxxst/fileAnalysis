@@ -102,7 +102,8 @@ export default class EditorKeyDownCtl {
 			if(keyCode in this.mapDownCtl) {
 				this.mapDownCtl[keyCode].call(this);
 			}
-			this.editor.scrollToRow(this.scrollRow);
+			// this.editor.scrollToRow(this.scrollRow);
+			// this.editor.scrollCusorToView();
 			if (this.prevent) {
 				this.evt.preventDefault && this.evt.preventDefault();
 			}
@@ -159,7 +160,8 @@ export default class EditorKeyDownCtl {
 		// 	this.onDownOrther();
 		// }
 
-		this.editor.scrollToRow(this.scrollRow);
+		// this.editor.scrollToRow(this.scrollRow);
+		// this.editor.scrollCusorToView();
 
 		if (this.prevent) {
 			this.evt.preventDefault && this.evt.preventDefault();
