@@ -1,5 +1,6 @@
 
 import HomeTs from '../components/page/home/HomeTs';
+import IHome from '../components/page/home/HomeTs';
 
 export default class MainModel{
 	static ins = new MainModel();
@@ -14,6 +15,8 @@ export default class MainModel{
 	serverUrl = "/server/";
 
 	isDebug = false;
+
+	home:IHome = null;
 }
 
 export class Size {

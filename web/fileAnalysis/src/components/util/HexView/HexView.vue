@@ -18,18 +18,20 @@
 
 		<!-- data -->
 		<div class="table-box">
-			<table>
+			<table class="data">
 				<thead>
 					<tr>
 						<th v-for="(it,idx) in lstHexHead" :key="idx" :width="it.width" :class="it.class" v-html="fhtml(it.desc)"></th>
 					</tr>
 				</thead>
 				<tbody>
+					<tr></tr>
 					<tr v-for="(it,idx) in lstHexData" :key="idx">
-						<td v-for="(it2,idx2) in it" :key="idx2" :class="{'gray':it2=='00'}">{{it2}}</td>
+						<td v-for="(it2,idx2) in it" :key="idx2" :class="{'gray':it2=='00'}"><span v-html="it2"></span></td>
 					</tr>
 				</tbody>
 			</table>
+			<div class="select-hide-fill"></div>
 		</div>
 
 		<!-- text -->
@@ -83,41 +85,46 @@ export default ctl;
 	>.hex-content {
 		width: 100%; height: 100%; padding: 4px; @extend %ex-one-line; overflow: hidden;
 		>.table-box {
-			display: inline-block; vertical-align: top;
+			position: relative; display: inline-block; height: 308px; border: 1px solid #acacac; vertical-align: top;
+			$rh: 18px;
 			>table {
-				border: 1px solid #acacac; font-size: 14px; font-family: 'Courier New', Courier, monospace;
-				$rh: 17px;
+				font-size: 14px; font-family: 'Courier New', Courier, monospace;
 				>thead {
 					>tr { height: $rh+1px; }
-					>tr>th { color: #973f93; height: $rh; line-height: $rh; font-weight: normal; }
+					>tr>th { color: #973f93; height: $rh; line-height: $rh - 1px; font-weight: normal; vertical-align: top; }
 				}
 				>tbody {
 					border-top: 1px solid #acacac;
 					>tr{
-						>td { padding: 0 4px; height: $rh; line-height: $rh; }
+						>td { padding: 0 4px; height: $rh; line-height: $rh - 1px; vertical-align: top; }
 						// >td:first-child { color: #973f93; padding-left: 4px; border-right: 1px solid #acacac; }
 						// >td:last-child { border-left: 1px solid #acacac; }
 						.gray { color: #b1b1b1; }
 					}
 				}
 				// .right { text-align: right; padding: 0 5px 0 0; }
-				.col1 { border-right: 1px solid #acacac; }
+				// .col1 { border-right: 1px solid #acacac; }
 				// .col-last { border-left: 1px solid #acacac; }
 				.title { color: #973f93; padding-left: 4px; }
 			}
+			// >.data>tbody>tr>td { line-height: $rh - 1px; }
+			>.data>tbody>tr:first-child { height: 0; }
+			// >.data>tbody>tr:first-child>td { height: $rh - 1px; line-height: $rh - 2px; }
+			>.data>tbody>tr>td:first-child { text-align: right; }
+			>.select-hide-fill { pointer-events: none; position: absolute; top: 20px; right: 0; bottom: 1px; width: 8px; background: #fff; }
 			// &:first-child {
 			// 	>tbody>tr>td:first-child { color: #973f93; padding-left: 4px; border-right: 1px solid #acacac; }
 			// }
 		}
-		.table-box+.table-box>table { border-left: 0; }
+		.table-box+.table-box { border-left: 0; }
 
-		>.scrollbar {
-			position: relative; display: inline-block; width: 10px; height: 292px; border: 1px solid #acacac; border-left: 0; @extend %ex-no-select;
-			>.btn {
-				position: absolute; width: 100%; height: 40px; left: 0; top: 0; border-radius: 5px; background: rgba(133, 133, 133, 0.6);
-				&:hover { background: rgba(207, 207, 207, 0.87); }
-			}
-		}
+		// >.scrollbar {
+		// 	position: relative; display: inline-block; width: 10px; height: 308px; border: 1px solid #acacac; border-left: 0; @extend %ex-no-select;
+		// 	>.btn {
+		// 		position: absolute; width: 100%; height: 40px; left: 0; top: 0; border-radius: 5px; background: rgba(133, 133, 133, 0.6);
+		// 		&:hover { background: rgba(207, 207, 207, 0.87); }
+		// 	}
+		// }
 	}
 	>.no-file-box {
 		position: absolute; width: 100%; height: 100%; left: 0; top: 0; @extend %flex-center;

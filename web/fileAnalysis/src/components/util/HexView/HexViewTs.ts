@@ -12,6 +12,7 @@ import IHexViewScrollbar, { HexViewScrollbarMd } from 'src/components/util/HexVi
 @Component({ components: { HexViewScrollbar }})
 export default class HexView extends Vue {
 	@Prop({ type: Function, default: null }) onUpdateFile:Function;
+	@Prop({ type: Function, default: null }) onScroll:Function;
 	
 	// oldOncontextmenu: any = null;
 
@@ -44,9 +45,11 @@ export default class HexView extends Vue {
 		var arr = [];
 		for(var i = 0 ; i < 16; ++i) {
 			var str = " " + i.toString(16).toLocaleUpperCase();
-			var width = "24px";
-			if(i == 15) {
+			var width = "25px";
+			if(i == 0) {
 				width = "28px";
+			} else if(i == 15) {
+				width = "29px";
 			}
 			arr.push({desc:str, width:width, class:"right"});
 		}
@@ -129,10 +132,10 @@ export default class HexView extends Vue {
 	updateTotalRow() {
 		var fileSize = this.getFileSize();
 		var colCount = 16;
-		var count = Math.floor(fileSize / colCount);
+		var count = Math.ceil(fileSize / colCount);
 		// console.info(totaRow, totaRow.toString(16));
 		this.totalRow = count;
-		this.slbMd.count = count;
+		this.slbMd.count = count - 1;
 	}
 
 	getFileSize() {
@@ -154,6 +157,7 @@ export default class HexView extends Vue {
 			this.lstAddr = [];
 			this.lstHexText = [];
 			this.showStartRow = 0;
+			this.onScroll && this.onScroll(0);
 			return;
 		}
 
@@ -167,6 +171,8 @@ export default class HexView extends Vue {
 		if(!refresh && this.showStartRow == row) {
 			return;
 		}
+
+		this.onScroll && this.onScroll(row);
 
 		this.isDoUpdateAddr = true;
 		this.showStartRow = row;
@@ -188,6 +194,9 @@ export default class HexView extends Vue {
 			var ch = await this.fileCache.getch(0);
 		}
 
+		var space = "&nbsp;";
+		var space2 = space + space;
+
 		var arrAddr = [];
 		var arr = [];
 		var arrHexText = [];
@@ -207,7 +216,7 @@ export default class HexView extends Vue {
 			for(var j = 0; j < 16; ++j) {
 				var idx = rowStart + j;
 				if(idx >= fsize) {
-					tmp.push("");
+					tmp.push(space2);
 					text += " ";
 				} else {
 					var ch = await this.fileCache.getch(idx);

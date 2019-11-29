@@ -18,12 +18,12 @@ export class FileStruct {
 	_saved = true;
 }
 
-export class RootFileStruct {
-	name = "";
-	address = "";
+// export class RootFileStruct {
+// 	name = "";
+// 	address = "";
 
-	// target: FileStruct = null;
-}
+// 	// target: FileStruct = null;
+// }
 
 export class FileStructInfo {
 	name = "";
@@ -31,4 +31,19 @@ export class FileStructInfo {
 	// lstData: FileStruct[] = [];
 	// routes: RootFileStruct[] = [];
 	structs: FileStruct[] = [];
+	address = "";
+}
+
+export class AddressAttrMd {
+	len = 0;
+}
+
+export class AddressMd {
+	name = "";
+	address = "";
+
+	realAddr = -1;
+	len = 0;
+
+	attrs: AddressAttrMd[] = [];
 }

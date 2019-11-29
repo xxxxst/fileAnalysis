@@ -4,10 +4,12 @@ export default class FileCache {
 	sliceCount = 10240;
 
 	mapCache = {};
+	len = 0;
 
 	setFile(_file:Blob){
 		this.file = _file;
 		this.mapCache = {};
+		this.len = this.file.size;
 	}
 
 	async getch(idx:number){
@@ -38,6 +40,7 @@ export default class FileCache {
 	clear() {
 		this.file = null;
 		this.mapCache = {};
+		this.len = 0;
 	}
 
 	private async readSlice(sliceIdx:number) {

@@ -1,24 +1,30 @@
 
 import * as monaco from "monaco-editor";
-import MonacoStructLang from 'src/model/MonacoStructLang';
+import MonacoAnaLang from 'src/model/MonacoAnaLang';
+import MonacoAddrLang from 'src/model/MonacoAddrLang';
 
-import { FileStructInfo, FileStruct, RootFileStruct, FileStructAttr } from 'src/model/FileStruct';
+import { FileStruct, FileStructAttr } from 'src/model/FileStruct';
 
 export default class MonacoEditrCtl {
 
-	monacoModel: monaco.editor.ITextModel = null;
+	anaModel: monaco.editor.ITextModel = null;
+	addrModel: monaco.editor.ITextModel = null;
 	editor: monaco.editor.IStandaloneCodeEditor = null;
 	
 	ele: HTMLDivElement = null;
 	mapStruct: Record<string, FileStruct> = {};
 	onUpdateText:Function = null;
 
+	fileType = "ana";
+
 	initGlobalMonacoEditor() {
+		var defaultLangCount = 61;
 		var arrLang = monaco.languages.getLanguages();
-		if(arrLang.length > 0 && arrLang[arrLang.length -1].id == "ana") {
+		if(arrLang.length > defaultLangCount) {
 			return;
 		}
-		MonacoStructLang();
+		MonacoAnaLang();
+		MonacoAddrLang();
 
 		var local = this;
 		var arr = ["bit", "char", "byte", "short", "ushort", "int", "uint", "long", "int64", "uint64", "float", "double", "WORD", "DWORD", "BYTE", "LONG"];
@@ -39,8 +45,8 @@ export default class MonacoEditrCtl {
 					}
 					arrRst.push({ label:arr[i], insertText:arr[i], detail: '' });
 				}
+
 				var map = local.mapStruct;
-				// console.info(map);
 				for(var key in map) {
 					var tmp = key.toLocaleLowerCase();
 					if(tmp.indexOf(str) != 0) {
@@ -52,16 +58,7 @@ export default class MonacoEditrCtl {
 				if(arrRst.length == 0) {
 					arrRst.push({ label:"", insertText:"", detail: ''});
 				}
-
 				return { suggestions: arrRst };
-
-				// console.info(position, context, token);
-				// return { suggestions:[{
-				// 	label: 'aaa',
-				// 	// kind: monaco.languages.CompletionItemKind['Function'],
-				// 	insertText: 'aaa',
-				// 	// detail: ''
-				// }]};
 			},
 		} as any);
 	}
@@ -69,17 +66,17 @@ export default class MonacoEditrCtl {
 	init(){
 		try {
 			// this.monacoModel = monaco.editor.createModel("[IconHeader | 中文]\r\n\r\naddress=\r\n\r\nbyte[3]	Reserved	= 3		;//	保留字段\r\nbyte[3]	Type		= 'bb'	;//	类型", "ana");
-			this.monacoModel = monaco.editor.createModel("", "ana");
-			this.monacoModel.updateOptions({
-				tabSize: 4,
-				insertSpaces: false,
-			});
+			this.anaModel = monaco.editor.createModel("", "ana");
+			this.anaModel.updateOptions({ tabSize: 4, insertSpaces: false, });
+			this.anaModel.onDidChangeContent(evt=>this.onUpdateText&&this.onUpdateText(evt));
 
-			this.monacoModel.onDidChangeContent(evt=>this.onUpdateText&&this.onUpdateText(evt));
+			this.addrModel = monaco.editor.createModel("", "addr");
+			this.addrModel.updateOptions({ tabSize: 4, insertSpaces: false, });
+			this.addrModel.onDidChangeContent(evt=>this.onUpdateText&&this.onUpdateText(evt));
 
 			// var ele:any = this.$refs.textEdit;
 			this.editor = monaco.editor.create(this.ele, {
-				model: this.monacoModel,
+				model: this.anaModel,
 				theme: "vs-dark",
 				minimap: { enabled: false },
 				lineNumbersMinChars: 3,
@@ -118,16 +115,38 @@ export default class MonacoEditrCtl {
 		}
 	}
 
+	setFileType(type:string) {
+		if(this.fileType == type) {
+			return;
+		}
+
+		this.fileType = type;
+
+		var md: monaco.editor.ITextModel = null;
+		if(type == "ana") {
+			md = this.anaModel;
+		} else {
+			md = this.addrModel;
+		}
+		md.setValue("");
+
+		this.editor.setModel(md);
+	}
+
 	setReadonly(isReadonly:boolean) {
 		this.editor.updateOptions({ readOnly: isReadonly });
 	}
 
+	getModel() {
+		return this.fileType == "ana" ? this.anaModel : this.addrModel;
+	}
+
 	getValue() {
-		return this.monacoModel.getValue();
+		return this.getModel().getValue();
 	}
 
 	setValue(str) {
-		this.monacoModel.setValue(str);
+		this.getModel().setValue(str);
 	}
 
 	setFileStruct(md:FileStruct) {

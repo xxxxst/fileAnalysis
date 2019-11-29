@@ -27,7 +27,7 @@
 			</div>
 			<div class="title">{{selectStructInfo.name}}</div>
 			<div class="right-box">
-				<div class="lbl-btn" :class="{'select':isShowStructView}" title="view struct" @click="onClickShowHideStructView()">C</div>
+				<!-- <div class="lbl-btn" :class="{'select':isShowStructView}" title="view struct" @click="onClickShowHideStructView()">C</div> -->
 			</div>
 		</div>
 		<!-- <div class="tree-content" v-show="!isShowStructView">
@@ -35,7 +35,7 @@
 		</div> -->
 		<div class="tree-content">
 			<div class="ctl-box">
-				<div class="btn" @click="onClickAddressBtn()">address</div>
+				<div class="btn" :class="{'select':isSelectAddress}" @click="onClickAddressBtn()">Address</div>
 			</div>
 
 			<div class="item" v-for="(it,idx) in selectStructInfo.structs" v-show="!isShowStructView" :key="'a'+idx" :class="{'select':selectStruct===it}" @click="onClickStruct(it)">{{it.name + ((selectStruct===it&&editText!=originText) ? ' *':'')}}</div>
@@ -53,12 +53,15 @@
 	</div>
 	
 	<div class="hex-box">
-		<HexView ref="hexView"/>
+		<HexView ref="hexView" :onUpdateFile="anoOnUpdateFile" :onScroll="anoOnHexViewScroll"/>
+		<div class="hex-fill-box">
+			<HexViewFill ref="hexViewFill" :arrAddress="arrAddress" :hexStartRow="hexStartRow"/>
+		</div>
 	</div>
 
 	<div class="config-box">
 		<div class="title">
-			<div class="lbl">{{selectStructName}}</div>
+			<div class="lbl">{{viewFileTitle + ((editText!=originText) ? ' *':'')}}</div>
 			<div class="btn-box">
 				<div class="btn" title="help">?</div>
 			</div>
@@ -104,7 +107,7 @@ export default ctl;
 	>.tree-box {
 		position: absolute; background: #fff; top: 60px; left: 0; width: 200px; bottom: 25px; border-right: 1px solid #acacac;
 		>.head {
-			position: relative; width: 100%; height: 30px; border-bottom: 1px solid #acacac;
+			position: relative; width: 100%; height: 30px; border-bottom: 1px solid #e2e2e2;
 			// >.row1 {
 			// 	position: relative; height: 28px; border-bottom: 1px solid #acacac;
 			// 	>.select-box {
@@ -145,7 +148,7 @@ export default ctl;
 		>.tree-content {
 			>.root { height: 24px; line-height: 24px; padding-left: 5px; background: #f5f5f5; }
 			>.ctl-box {
-				height: 24px; line-height: 22px; border-bottom: 1px solid #acacac; @extend %ex-one-line;
+				height: 30px; line-height: 30px; border-bottom: 1px solid #acacac; @extend %ex-one-line;
 				>.btn {
 					cursor: default; display: inline-block; height: 100%; padding: 0 6px; font-size: 12px; vertical-align: top;
 					&:hover { background: #e4e4e4; }
@@ -160,18 +163,19 @@ export default ctl;
 	}
 
 	>.map-box {
-		position: absolute; background: #fff; top: 60px; left: 200px; width: 658px; bottom: 335px; overflow: auto; @include scrollbar(4px);
+		position: absolute; background: #fff; top: 60px; left: 200px; width: 658px; bottom: 325px; overflow: auto; @include scrollbar(4px);
 	}
 
 	>.hex-box {
-		position: absolute; background: #fff; left: 200px; bottom: 25px; width: 658px; height: 310px; border-top: 1px solid #acacac;
+		position: absolute; background: #fff; left: 200px; bottom: 25px; width: 658px; height: 320px; border-top: 1px solid #acacac;
+		>.hex-fill-box { pointer-events: none; position: absolute; left: 85px; top: 24px; width: 406px; height: 273px; }
 	}
 	
 	>.config-box {
 		position: absolute; background: #fff; top: 60px; right: 0; left: 200px+658px; bottom: 25px; border-left: 1px solid #acacac;
 		>.title {
 			position: relative; height: 28px; width: 100%; background: #252526;
-			>.lbl { display: inline-block; height: 28px; line-height: 28px; padding-left: 8px; font-size: 14px; color: #fff; }
+			>.lbl { display: inline-block; height: 28px; line-height: 26px; padding-left: 8px; font-size: 12px; color: #fff; }
 			>.btn-box {
 				position: absolute; right: 0; top: 0; height: 20px;
 				>.btn { cursor: pointer; display: inline-block; border: 1px solid #bbb; width: 18px; height: 18px; margin-top: 5px; margin-right: 5px; line-height: 16px; font-size: 12px; color: #bbb; text-align: center; vertical-align: top; }

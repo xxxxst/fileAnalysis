@@ -16,11 +16,13 @@ import IHexView from 'src/components/util/HexView/HexViewTs';
 import SimpleMonacoEditor from 'src/components/util/SimpleMonacoEditor/SimpleMonacoEditor.vue';
 import ISimpleMonacoEditor from 'src/components/util/SimpleMonacoEditor/SimpleMonacoEditorTs';
 import { TextMd } from 'src/components/util/SimpleMonacoEditor/model/TextMd';
-import { FileStructInfo, FileStruct, RootFileStruct } from 'src/model/FileStruct';
+import { FileStructInfo, FileStruct, AddressMd, AddressAttrMd } from 'src/model/FileStruct';
 import MonacoEditrCtl from 'src/control/MonacoEditrCtl';
 import MapPreview from 'src/components/mapPreview/MapPreview.vue';
+import HexViewFill from 'src/components/hexViewFill/HexViewFill.vue';
+import IHexViewFill from 'src/components/hexViewFill/HexViewFillTs';
 
-@Component({ components: { HexView, SimpleMonacoEditor, MapPreview }})
+@Component({ components: { HexView, HexViewFill, SimpleMonacoEditor, MapPreview }})
 export default class Home extends Vue {
 	@SState("winSize") winSize: Size;
 	@SState("isDebug") isDebug:boolean;
@@ -29,14 +31,17 @@ export default class Home extends Vue {
 
 	isInited = false;
 	isShowStructView = false;
+	isSelectAddress = false;
+	hexStartRow = 0;
 
 	lstFileStruct: FileStructInfo[] = [];
+	arrAddress: AddressMd[] = [];
 
 	selectStructInfo: FileStructInfo = null;
 	arrSelectStruct: FileStruct[] = [];
 	// selectRootStruct: RootFileStruct = null;
 	selectStruct: FileStruct = null;
-	selectStructName = "";
+	viewFileTitle = "";
 
 	// colMinLength = [0, 0, 0, 0];
 
@@ -44,6 +49,7 @@ export default class Home extends Vue {
 	editText = "";
 	// changeMonacoTextInner = false;
 	// mapMonacoComplation:Record<string, string> = {};
+	mapTypeLen: Record<string, number> = {};
 	
 	@VIgnore()
 	fileCache: FileCache = null;
@@ -85,6 +91,27 @@ export default class Home extends Vue {
 		if(this.isDebug) {
 			MainModel.ins.serverUrl = "http://localhost:8093/fileAnalysis/server/";
 		}
+
+		this.mapTypeLen = {
+			"bit": 0.125,
+			"char": 1,
+			"byte": 1,
+			"short": 2,
+			"ushort": 2,
+			"int": 4,
+			"uint": 4,
+			"long": 4,
+			"int64": 8,
+			"uint64": 8,
+			"float": 4,
+			"double": 8,
+			"WORD": 2,
+			"DWORD": 4,
+			"BYTE": 1,
+			"LONG": 4,
+		};
+
+		MainModel.ins.home = this;
 
 		this.monacoEditCtl.onUpdateText = (e)=>this.onUpdateText(e);
 		this.monacoEditCtl.initGlobalMonacoEditor();
@@ -142,8 +169,24 @@ export default class Home extends Vue {
 		return this.$refs.hexView as IHexView;
 	}
 
+	anoOnHexViewScroll = (r)=>this.onHexViewScroll(r);
+	onHexViewScroll(row) {
+		this.hexStartRow = row;
+	}
+
+	getHexViewFill() {
+		return this.$refs.hexViewFill as IHexViewFill;
+	}
+
+	anoOnUpdateFile = (f)=>this.onUpdateFile(f);
 	onUpdateFile(fileCache) {
 		this.fileCache = fileCache;
+
+		this.getHexViewFill().setFileCache(fileCache);
+
+		if(this.selectStructInfo) {
+			this.calcAddress();
+		}
 	}
 
 	onUpdateText(evt) {
@@ -280,16 +323,106 @@ export default class Home extends Vue {
 		}
 		this.monacoEditCtl.mapStruct = map;
 		// this.mapStruct = map;
+
+		this.formatAddress();
+	}
+
+	formatAddress() {
+		var md = this.selectStructInfo;
+		if(!md) {
+			return;
+		}
+
+		var rst = [];
+		var arr = md.address.replace(/\r\n/g, "\n").split("\n");
+		for(var i = 0; i < arr.length; ++i) {
+			var idx = arr[i].indexOf("	");
+			if(idx < 0) {
+				continue;
+			}
+			var tmp = new AddressMd();
+			tmp.name = arr[i].substr(0, idx);
+			tmp.address = arr[i].substr(idx+1);
+
+			rst.push(tmp);
+		}
+
+		this.arrAddress = rst;
+
+		if(this.fileCache) {
+			this.calcAddress();
+		}
+	}
+
+	calcStructLen(name, outAttrLen:Array<number>=null) {
+		var map = this.monacoEditCtl.mapStruct;
+		if(!(name in map)) {
+			return 0;
+		}
+
+		var len = 0;
+		var arr = map[name].attrs;
+		for(var i = 0; i < arr.length; ++i) {
+			var type = arr[i].type;
+			if(type in this.mapTypeLen) {
+				var tmp = this.mapTypeLen[type];
+				outAttrLen && outAttrLen.push(tmp);
+				len += tmp;
+				continue;
+			}
+
+			if(!(type in map)) {
+				outAttrLen && (outAttrLen.splice(0, outAttrLen.length));
+				len = 0;
+				break;
+			}
+
+			var tmp = this.calcStructLen(type);
+			outAttrLen && outAttrLen.push(tmp);
+			len += tmp;
+		}
+
+		return len;
+	}
+
+	calcAddress() {
+		var map = this.monacoEditCtl.mapStruct;
+		for(var i = 0; i < this.arrAddress.length; ++i) {
+			var md = this.arrAddress[i];
+			md.realAddr = -1;
+			if(!(md.name in map)) {
+				continue;
+			}
+
+			try {
+				md.realAddr = eval(md.address);
+			} catch(ex) {
+				md.realAddr = -1;
+			}
+			var arr = [];
+			var attrs = [];
+			md.len = this.calcStructLen(md.name, arr);
+			for(var j = 0; j < arr.length; ++j) {
+				var tmp = new AddressAttrMd();
+				tmp.len = arr[j];
+				attrs.push(tmp);
+			}
+			md.attrs = attrs;
+		}
+		// console.info(this.arrAddress);
 	}
 
 	onClickBack() {
+		this.viewFileTitle = "";
 		this.selectStructInfo = null;
 		this.arrSelectStruct = [];
 		// this.selectRootStruct = null;
 		this.selectStruct = null;
+		this.isSelectAddress = false;
 		this.monacoEditCtl.mapStruct = {};
 		this.monacoEditCtl.editor.updateOptions({ readOnly: true });
 		this.monacoEditCtl.setValue("");
+		this.arrAddress = [];
 		// this.mapStruct = {};
 		// // this.monacoModel.setValue("");
 		// this.editor.updateOptions({ readOnly: true });
@@ -302,18 +435,18 @@ export default class Home extends Vue {
 		
 	}
 
-	onClickShowHideStructView() {
-		this.isShowStructView = !this.isShowStructView;
-		// this.selectRootStruct = null;
-		this.selectStruct = null;
-		// this.monacoModel.setValue("");
-		this.monacoEditCtl.editor.updateOptions({ readOnly: true });
-		this.monacoEditCtl.setValue("");
-		// this.editor.updateOptions({ readOnly: true });
-		// this.setMonacoTextInner("");
-		this.originText = "";
-		// this.colMinLength = [0, 0, 0, 0];
-	}
+	// onClickShowHideStructView() {
+	// 	this.isShowStructView = !this.isShowStructView;
+	// 	// this.selectRootStruct = null;
+	// 	this.selectStruct = null;
+	// 	// this.monacoModel.setValue("");
+	// 	this.monacoEditCtl.editor.updateOptions({ readOnly: true });
+	// 	this.monacoEditCtl.setValue("");
+	// 	// this.editor.updateOptions({ readOnly: true });
+	// 	// this.setMonacoTextInner("");
+	// 	this.originText = "";
+	// 	// this.colMinLength = [0, 0, 0, 0];
+	// }
 
 	// onClickRootStruct(it:RootFileStruct) {
 	// 	var map = this.monacoEditCtl.mapStruct;
@@ -332,9 +465,10 @@ export default class Home extends Vue {
 
 	onClickStruct(it:FileStruct) {
 		this.selectStruct = it;
-		this.selectStructName = it.name;
+		this.viewFileTitle = it.name;
+		this.isSelectAddress = false;
+		this.monacoEditCtl.setFileType("ana");
 		this.monacoEditCtl.setReadonly(false);
-		// this.editor.updateOptions({ readOnly: false });
 
 		this.updateText();
 	}
@@ -345,6 +479,7 @@ export default class Home extends Vue {
 		}
 		var md = this.selectStruct;
 		this.originText = this.monacoEditCtl.setFileStruct(md);
+
 		// var attrs = this.selectStruct.attrs;
 
 		// this.calcColMinLength();
@@ -367,7 +502,17 @@ export default class Home extends Vue {
 	}
 
 	onClickAddressBtn() {
+		if(!this.selectStructInfo) {
+			return;
+		}
+		this.selectStruct = null;
+		this.isSelectAddress = true;
+		this.viewFileTitle = "Address";
+		this.monacoEditCtl.setFileType("addr");
+		this.monacoEditCtl.setReadonly(false);
 		
+		this.monacoEditCtl.setValue(this.selectStructInfo.address);
+		this.originText = this.selectStructInfo.address;
 	}
 
 };
