@@ -49,7 +49,7 @@
 	</div>
 
 	<div class="map-box">
-		<MapPreview :data="arrSelectStruct"/>
+		<MapPreview :data="arrSelectStructAddr"/>
 	</div>
 	
 	<div class="hex-box">
@@ -163,7 +163,7 @@ export default ctl;
 	}
 
 	>.map-box {
-		position: absolute; background: #fff; top: 60px; left: 200px; width: 658px; bottom: 325px; overflow: auto; @include scrollbar(4px);
+		position: absolute; background: #fff; top: 60px; left: 200px; width: 658px; bottom: 345px; overflow: auto; @include scrollbar(4px);
 	}
 
 	>.hex-box {

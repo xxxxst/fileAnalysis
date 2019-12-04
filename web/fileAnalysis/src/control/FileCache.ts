@@ -37,6 +37,35 @@ export default class FileCache {
 		return data.data.charCodeAt(subIdx);
 	}
 
+	async getArray(idx:number, len:number) {
+		if(!this.file) {
+			return [];
+		}
+		if(idx < 0 || len <= 0 || idx + len >= this.file.size) {
+			return [];
+		}
+
+		var rst = [];
+		for(var i = 0; i < len; ++i) {
+			var sliceIdx = this.getSlice(idx + i);
+			if(!(sliceIdx in this.mapCache)) {
+				await this.readSlice(sliceIdx);
+			}
+
+			if(!(sliceIdx in this.mapCache)) {
+				return [];
+			}
+
+			var data = this.mapCache[sliceIdx];
+			var subIdx = idx + i - sliceIdx * this.sliceCount;
+			if(subIdx < 0) {
+				return [];
+			}
+			rst.push(data.data.charCodeAt(subIdx));
+		}
+		return rst;
+	}
+
 	clear() {
 		this.file = null;
 		this.mapCache = {};

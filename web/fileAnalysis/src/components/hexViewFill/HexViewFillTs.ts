@@ -22,10 +22,12 @@ class RenderItem {
 
 @Component({ components: { }})
 export default class HexViewFill extends Vue {
-	@Prop({ type: Array, default: ()=>[] }) arrAddress:AddressMd[];
-	@Prop({ type: Number, default: 0 }) hexStartRow:number;
+	@Prop({ type: Array, default: ()=>[] }) arrAddress: AddressMd[];
+	@Prop({ type: Array, default: ()=>[] }) arrOverAddress: AddressMd[];
+	@Prop({ type: Number, default: 0 }) hexStartRow: number;
 
 	renderData: RenderRoot[] = [];
+	renderOverData: RenderRoot[] = [];
 
 	@VIgnore()
 	fileCache: FileCache = null;
@@ -109,7 +111,7 @@ export default class HexViewFill extends Vue {
 			}
 
 		}
-		console.info(rst);
+		// console.info(rst);
 		this.renderData = rst;
 	}
 

@@ -16,7 +16,7 @@ import IHexView from 'src/components/util/HexView/HexViewTs';
 import SimpleMonacoEditor from 'src/components/util/SimpleMonacoEditor/SimpleMonacoEditor.vue';
 import ISimpleMonacoEditor from 'src/components/util/SimpleMonacoEditor/SimpleMonacoEditorTs';
 import { TextMd } from 'src/components/util/SimpleMonacoEditor/model/TextMd';
-import { FileStructInfo, FileStruct, AddressMd, AddressAttrMd } from 'src/model/FileStruct';
+import { FileStructInfo, FileStruct, AddressMd, AddressAttrMd, StructAddressMd, FileStructAttr, StructAddressItem, StructAddressAttr } from 'src/model/FileStruct';
 import MonacoEditrCtl from 'src/control/MonacoEditrCtl';
 import MapPreview from 'src/components/mapPreview/MapPreview.vue';
 import HexViewFill from 'src/components/hexViewFill/HexViewFill.vue';
@@ -38,7 +38,7 @@ export default class Home extends Vue {
 	arrAddress: AddressMd[] = [];
 
 	selectStructInfo: FileStructInfo = null;
-	arrSelectStruct: FileStruct[] = [];
+	arrSelectStructAddr: StructAddressMd[] = [];
 	// selectRootStruct: RootFileStruct = null;
 	selectStruct: FileStruct = null;
 	viewFileTitle = "";
@@ -93,7 +93,7 @@ export default class Home extends Vue {
 		}
 
 		this.mapTypeLen = {
-			"bit": 0.125,
+			// "bit": 0.125,
 			"char": 1,
 			"byte": 1,
 			"short": 2,
@@ -314,7 +314,14 @@ export default class Home extends Vue {
 
 	onClickFormat(it:FileStructInfo) {
 		this.selectStructInfo = it;
-		this.arrSelectStruct = it.structs;
+		// this.arrSelectStructAddr = it.structs;
+		var arr = [];
+		for(var i = 0; i < it.structs.length; ++i) {
+			var tmp = new StructAddressMd();
+			tmp.data = it.structs[i];
+			arr.push(tmp);
+		}
+		this.arrSelectStructAddr = arr;
 
 		var map = {};
 		for(var key in this.selectStructInfo.structs) {
@@ -366,6 +373,9 @@ export default class Home extends Vue {
 			var type = arr[i].type;
 			if(type in this.mapTypeLen) {
 				var tmp = this.mapTypeLen[type];
+				if(arr[i].arrayLength >= 0) {
+					tmp = tmp * arr[i].arrayLength;
+				}
 				outAttrLen && outAttrLen.push(tmp);
 				len += tmp;
 				continue;
@@ -378,11 +388,37 @@ export default class Home extends Vue {
 			}
 
 			var tmp = this.calcStructLen(type);
+			if(arr[i].arrayLength >= 0) {
+				tmp = tmp * arr[i].arrayLength;
+			}
 			outAttrLen && outAttrLen.push(tmp);
 			len += tmp;
 		}
 
 		return len;
+	}
+
+	getAttrLen(attr:FileStructAttr) {
+		var map = this.monacoEditCtl.mapStruct;
+
+		var type = attr.type;
+		if(type in this.mapTypeLen) {
+			var tmp = this.mapTypeLen[type];
+			if(attr.arrayLength >= 0) {
+				tmp = tmp * attr.arrayLength;
+			}
+			return tmp;
+		}
+
+		if(!(type in map)) {
+			return 0;
+		}
+
+		var tmp = this.calcStructLen(type);
+		if(attr.arrayLength >= 0) {
+			tmp = tmp * attr.arrayLength;
+		}
+		return tmp;
 	}
 
 	calcAddress() {
@@ -402,20 +438,155 @@ export default class Home extends Vue {
 			var arr = [];
 			var attrs = [];
 			md.len = this.calcStructLen(md.name, arr);
+			var pos = md.realAddr;
 			for(var j = 0; j < arr.length; ++j) {
 				var tmp = new AddressAttrMd();
+				tmp.address = pos;
 				tmp.len = arr[j];
 				attrs.push(tmp);
+				pos += arr[j];
 			}
 			md.attrs = attrs;
 		}
 		// console.info(this.arrAddress);
+
+		this.updateAttrValue();
+	}
+
+	async updateAttrValue() {
+		var mapCacheRst: Record<string, Array<StructAddressItem>> = {};
+		var mapStructAddr: Record<string, StructAddressMd> = {};
+		for(var i = 0; i < this.arrSelectStructAddr.length; ++i) {
+			var it = this.arrSelectStructAddr[i];
+			mapStructAddr[it.data.name] = it;
+			// it.arrItem = [];
+			mapCacheRst[it.data.name] = [];
+		}
+
+		// var map = this.monacoEditCtl.mapStruct;
+		
+		for(var i = 0; i < this.arrAddress.length; ++i) {
+			var md = this.arrAddress[i];
+			if(!(md.name in mapStructAddr)) {
+				continue;
+			}
+
+			if(md.realAddr < 0) {
+				continue;
+			}
+			
+			var md2 = new StructAddressItem();
+			md2.address = md.realAddr;
+			md2.addrIdx = i;
+
+			var data = mapStructAddr[md.name].data;
+			var pos = md.realAddr;
+			for(var j = 0; j < data.attrs.length; ++j) {
+				var it2 = data.attrs[j];
+				var len = this.getAttrLen(it2);
+				var val = await this.getAttrValue(pos, it2);
+
+				var tmp = new StructAddressAttr();
+				tmp.address = pos;
+				tmp.idx = j;
+				tmp.addrIdx = i;
+				tmp.values = val;
+				md2.attrData.push(tmp);
+				pos += len;
+			}
+			mapCacheRst[md.name].push(md2);
+			// mapStructAddr[md.name].arrItem.push(md2);
+		}
+
+		for(var key in mapCacheRst) {
+			mapStructAddr[key].arrItem = mapCacheRst[key];
+		}
+	}
+
+	async getAttrValue(address:number, attr:FileStructAttr, maxLoadArrayCount = 10): Promise<any[]> {
+		if(!this.fileCache) {
+			return [];
+		}
+
+		var type = attr.type;
+		if(!(type in this.mapTypeLen)) {
+			return [];
+		}
+
+		if(attr.arrayLength == 0) {
+			return [];
+		}
+
+		var len = this.mapTypeLen[type];
+		var totalLen = len;
+		var count = 1;
+		if(attr.arrayLength >= 0) {
+			count = attr.arrayLength > maxLoadArrayCount ? maxLoadArrayCount : attr.arrayLength;
+			totalLen = len * count;
+		}
+
+		var arr = await this.fileCache.getArray(address, totalLen);
+		if(arr.length < totalLen) {
+			return [];
+		}
+		var pos = 0;
+		var rst = [];
+		for(var i = 0; i < count; ++i) {
+			var tmp = 0;
+			switch(type) {
+				case "char": {
+					tmp = arr[pos];
+					if((arr[pos] & 0x80) != 0) {
+						tmp = -(0xff + ~tmp) - 2;
+					}
+					break;
+				}
+				case "byte":
+				case "BYTE": tmp = arr[pos]; break;
+				case "short": {
+					tmp = ((arr[pos+1] << 8) + arr[pos]);
+					if((arr[pos+1] & 0x80) != 0) {
+						tmp = -(0xffff + ~tmp) - 2;
+					}
+					break;
+				}
+				case "ushort":
+				case "WORD": tmp = ((arr[pos+1] << 8) + arr[pos]); break;
+				case "int":
+				case "long":
+				case "LONG": {
+					tmp = ((arr[pos+3] << 24) + (arr[pos+2] << 16) + (arr[pos+1] << 8) + arr[pos]);
+					if((arr[pos+3] & 0x80) != 0) {
+						tmp = -(0xffffffff + ~tmp) - 2;
+					}
+					break;
+				}
+				case "uint":
+				case "DWORD":tmp = ((arr[pos+3] << 24) + (arr[pos+2] << 16) + (arr[pos+1] << 8) + arr[pos]); break;
+				case "int64": {
+					tmp = ((arr[pos+7] << 56) + (arr[pos+6] << 48) + (arr[pos+5] << 40) + (arr[pos+4] << 32) + (arr[pos+3] << 24) + (arr[pos+2] << 16) + (arr[pos+1] << 8) + arr[pos]); break;
+					if((arr[pos+7] & 0x80) != 0) {
+						tmp = -(0xffffffffffffffff + ~tmp) - 2;
+					}
+					break;
+				}
+				case "uint64": tmp = ((arr[pos+7] << 56) + (arr[pos+6] << 48) + (arr[pos+5] << 40) + (arr[pos+4] << 32) + (arr[pos+3] << 24) + (arr[pos+2] << 16) + (arr[pos+1] << 8) + arr[pos]); break;
+				case "float":
+				case "double":
+				default: break;
+			}
+			rst.push(tmp);
+			pos += len;
+		}
+		// console.info(attr.name, count, rst);
+
+		return rst;
 	}
 
 	onClickBack() {
 		this.viewFileTitle = "";
 		this.selectStructInfo = null;
-		this.arrSelectStruct = [];
+		this.arrSelectStructAddr = [];
 		// this.selectRootStruct = null;
 		this.selectStruct = null;
 		this.isSelectAddress = false;
@@ -515,4 +686,4 @@ export default class Home extends Vue {
 		this.originText = this.selectStructInfo.address;
 	}
 
-};
+}

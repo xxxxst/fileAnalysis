@@ -14,8 +14,8 @@ export class FileStruct {
 	textCache = "";
 	attrs: FileStructAttr[] = [];
 
-	_editTextCache = "";
-	_saved = true;
+	// _editTextCache = "";
+	// _saved = true;
 }
 
 // export class RootFileStruct {
@@ -35,6 +35,7 @@ export class FileStructInfo {
 }
 
 export class AddressAttrMd {
+	address = 0;
 	len = 0;
 }
 
@@ -46,4 +47,22 @@ export class AddressMd {
 	len = 0;
 
 	attrs: AddressAttrMd[] = [];
+}
+
+export class StructAddressAttr {
+	idx = -1;
+	address = -1;
+	addrIdx = -1;
+	values = [];
+}
+
+export class StructAddressItem {
+	address = 0;
+	addrIdx = -1;
+	attrData: StructAddressAttr[] = [];
+}
+
+export class StructAddressMd {
+	data: FileStruct = null;
+	arrItem: StructAddressItem[] = [];
 }

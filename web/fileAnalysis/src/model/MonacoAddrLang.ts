@@ -15,7 +15,7 @@ export var language = {
     // we include these common regular expressions
     escapes: /\\(?:[abfnrtv\\"']|x[0-9A-Fa-f]{1,4}|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8})/,
 	keywords: [
-		"bit", "char", "byte", "short", "ushort", "int", "uint", "long", "int64", "uint64", "float", "double", "WORD", "DWORD", "BYTE", "LONG"
+		"char", "byte", "short", "ushort", "int", "uint", "long", "int64", "uint64", "float", "double", "WORD", "DWORD", "BYTE", "LONG"
 	],
     tokenizer: {
         root: [
