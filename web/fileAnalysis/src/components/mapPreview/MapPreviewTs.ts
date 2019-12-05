@@ -168,7 +168,7 @@ export default class MapPreview extends Vue {
 	}
 
 	onClickData(idx:number, idx2:number, idx3:number) {
-		console.info(this.data[idx]);
+		// console.info(this.data[idx]);
 		this.hightlightData(idx, idx2, idx3, false);
 	}
 
@@ -212,8 +212,8 @@ export default class MapPreview extends Vue {
 			rst.height = rowHeight * render.data.length + 2;
 
 			var hlData = [];
-			var addrIdx = md.arrItem[idx2-1].addrIdx;
-			for(var j = 0; j < md.arrItem[idx2-1].attrData.length; ++j) {
+			var addrIdx = md.arrItem[idx3-1].addrIdx;
+			for(var j = 0; j < md.arrItem[idx3-1].attrData.length; ++j) {
 				hlData.push([addrIdx, j]);
 			}
 
@@ -231,7 +231,7 @@ export default class MapPreview extends Vue {
 			var hlData = [];
 			for(var j = 0; j < md.arrItem.length; ++j) {
 				var addrIdx = md.arrItem[j].addrIdx;
-				hlData.push([addrIdx, idx3-1]);
+				hlData.push([addrIdx, idx2-1]);
 			}
 
 			this.setHeighlightData(rst, hlData, isOver);
@@ -244,7 +244,7 @@ export default class MapPreview extends Vue {
 		rst.height = rowHeight + 1;
 		
 		var hlData = [];
-		hlData.push([md.arrItem[idx2-1].addrIdx, idx3-1]);
+		hlData.push([md.arrItem[idx3-1].addrIdx, idx2-1]);
 
 		this.setHeighlightData(rst, hlData, isOver);
 	}
@@ -265,7 +265,6 @@ export default class MapPreview extends Vue {
 			this.arrHightlightData = hlData;
 			this.updateSelectDataStyle();
 		}
-
 
 		this.onHightlightChanged && this.onHightlightChanged(this.arrHightlightData);
 	}
@@ -292,8 +291,9 @@ export default class MapPreview extends Vue {
 	}
 
 	onOutData() {
-		this.overData = new OverDataStyle();
-		this.updateOverDataStyle();
+		// this.overData = new OverDataStyle();
+		// this.updateOverDataStyle();
+		this.setHeighlightData(new OverDataStyle(), [], true);
 	}
 
 	onClickBack(evt) {
@@ -301,8 +301,9 @@ export default class MapPreview extends Vue {
 			return;
 		}
 
-		this.selectData = new OverDataStyle();
-		this.updateSelectDataStyle();
+		// this.selectData = new OverDataStyle();
+		// this.updateSelectDataStyle();
+		this.setHeighlightData(new OverDataStyle(), [], false);
 	}
 
 }

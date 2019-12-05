@@ -6,6 +6,8 @@
 			<template v-for="(it,idx) in renderData">
 				<polyline v-for="(it2,idx2) in it.attrs" :key="idx+'_'+idx2" :points="it2.path"/>
 			</template>
+
+			<polyline class="over" v-for="(it,idx) in renderOverData" :key="'ov_'+idx" :points="it.path"/>
 		</g>
 	</svg>
 </div>

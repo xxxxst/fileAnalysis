@@ -23,11 +23,12 @@ class RenderItem {
 @Component({ components: { }})
 export default class HexViewFill extends Vue {
 	@Prop({ type: Array, default: ()=>[] }) arrAddress: AddressMd[];
-	@Prop({ type: Array, default: ()=>[] }) arrOverAddress: AddressMd[];
+	@Prop({ type: Array, default: ()=>[] }) arrHightlightData: any[];
 	@Prop({ type: Number, default: 0 }) hexStartRow: number;
 
 	renderData: RenderRoot[] = [];
-	renderOverData: RenderRoot[] = [];
+	renderOverData: RenderItem[] = [];
+	mapRenderData: Record<number, RenderRoot> = {};
 
 	@VIgnore()
 	fileCache: FileCache = null;
@@ -42,6 +43,8 @@ export default class HexViewFill extends Vue {
 		var fileLen = this.getFileLen();
 		if(fileLen <= 0) {
 			this.renderData = [];
+			this.renderOverData = [];
+			this.mapRenderData = {};
 			return;
 		}
 
@@ -54,6 +57,7 @@ export default class HexViewFill extends Vue {
 		var h = 18;
 
 		var rst = [];
+		var map: Record<number, RenderRoot> = {};
 		for(var i = 0; i < this.arrAddress.length; ++i) {
 			var startRoot = this.arrAddress[i].realAddr;
 			var lenRoot = this.arrAddress[i].len;
@@ -64,6 +68,10 @@ export default class HexViewFill extends Vue {
 			}
 
 			var pos = 0;
+			
+			var root = new RenderRoot();
+			rst.push(root);
+			map[i] = root;
 
 			for(var j = 0; j < this.arrAddress[i].attrs.length; ++j) {
 				var attr = this.arrAddress[i].attrs[j];
@@ -88,9 +96,6 @@ export default class HexViewFill extends Vue {
 				var x2 = (c2+1) * w + 3;
 				var y2 = (r2+1) * h - 3;
 
-				var root = new RenderRoot();
-				rst.push(root);
-
 				var md = new RenderItem();
 				root.attrs.push(md);
 
@@ -112,7 +117,33 @@ export default class HexViewFill extends Vue {
 
 		}
 		// console.info(rst);
+		this.mapRenderData = map;
 		this.renderData = rst;
+
+		this.onHightlightDataChanged();
+	}
+
+	@Watch("arrHightlightData", { immediate:true, deep: true })
+	onHightlightDataChanged() {
+		var map = this.mapRenderData;
+		var hlRst = [];
+
+		for (var i = 0; i < this.arrHightlightData.length; ++i) {
+			var it = this.arrHightlightData[i];
+			if (!(it[0] in map)) {
+				continue;
+			}
+
+			var attrs = map[it[0]].attrs;
+			if (it[1] >= attrs.length) {
+				continue;
+			}
+
+			hlRst.push(attrs[it[1]]);
+		}
+
+		// console.info(test, map);
+		this.renderOverData = hlRst;
 	}
 
 	created() {

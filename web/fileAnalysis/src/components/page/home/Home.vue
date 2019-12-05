@@ -49,13 +49,13 @@
 	</div>
 
 	<div class="map-box">
-		<MapPreview :data="arrSelectStructAddr"/>
+		<MapPreview :data="arrSelectStructAddr" :onHightlightChanged="anoOnHightlightChanged"/>
 	</div>
 	
 	<div class="hex-box">
 		<HexView ref="hexView" :onUpdateFile="anoOnUpdateFile" :onScroll="anoOnHexViewScroll"/>
 		<div class="hex-fill-box">
-			<HexViewFill ref="hexViewFill" :arrAddress="arrAddress" :hexStartRow="hexStartRow"/>
+			<HexViewFill ref="hexViewFill" :arrAddress="arrAddress" :arrHightlightData="arrHightlightData" :hexStartRow="hexStartRow"/>
 		</div>
 	</div>
 

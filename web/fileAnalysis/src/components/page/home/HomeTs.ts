@@ -36,6 +36,7 @@ export default class Home extends Vue {
 
 	lstFileStruct: FileStructInfo[] = [];
 	arrAddress: AddressMd[] = [];
+	arrHightlightData = [];
 
 	selectStructInfo: FileStructInfo = null;
 	arrSelectStructAddr: StructAddressMd[] = [];
@@ -684,6 +685,12 @@ export default class Home extends Vue {
 		
 		this.monacoEditCtl.setValue(this.selectStructInfo.address);
 		this.originText = this.selectStructInfo.address;
+	}
+
+	anoOnHightlightChanged = (d)=>this.onHightlightChanged(d);
+	onHightlightChanged(hlData) {
+		// console.info(hlData);
+		this.arrHightlightData = hlData;
 	}
 
 }
