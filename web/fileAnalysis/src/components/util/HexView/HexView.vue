@@ -1,5 +1,5 @@
 <template>
-<div class="hex-view" ref="dragFileBox" @mousewheel="onMousewheel($event)">
+<div class="hex-view" ref="dragFileBox" tabindex="0" @mousewheel="onMousewheel($event)" @keydown="onKeydown($event)">
 	<div class="hex-content" v-show="!isWaitFile">
 		<div class="table-box">
 			<table>
@@ -58,7 +58,7 @@
 	</div>
 	<div class="no-file-box" v-show="isWaitFile">
 		<div class="content" :class="{'dragging':isDraggingFile}">
-			<span>拖拽文件到这里</span>
+			<span>Drag file here</span>
 		</div>
 	</div>
 </div>

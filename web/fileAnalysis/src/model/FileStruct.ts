@@ -1,8 +1,8 @@
 
 export class FileStructAttr {
-	name = "";
-	desc = "";
-	type = "";
+	name = "key";
+	desc = "desc";
+	type = "byte";
 	arrayLength = -1;
 	defaultValue = "";
 }
@@ -12,6 +12,7 @@ export class FileStruct {
 	desc = "";
 	// address = "";
 	textCache = "";
+	editCache = "";
 	attrs: FileStructAttr[] = [];
 
 	// _editTextCache = "";
@@ -32,6 +33,7 @@ export class FileStructInfo {
 	// routes: RootFileStruct[] = [];
 	structs: FileStruct[] = [];
 	address = "";
+	editAddress = "";
 }
 
 export class AddressAttrMd {

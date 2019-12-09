@@ -2,7 +2,7 @@
 
 <div class="home" v-show="isInited">
 	<div class="top-box">
-
+		<div class="item" @click="onSaveToServer()"><span>{{'Save' + (needSaveToServer ? "\n*" : "")}}</span></div>
 	</div>
 	
 	<div class="tree-box" v-if="!selectStructInfo">
@@ -12,11 +12,17 @@
 			</div>
 			<div class="title">选择格式</div>
 			<div class="right-box">
-				<img class="btn" src="static/image/add.png" alt="" @click="onClickAddFormat()">
+				<img class="btn" src="static/image/add.png" alt="" title="add parser" @click="onClickAddFormat()">
+				<img class="btn" src="static/image/edit.png" alt="" title="edit" @click="isEditTree=!isEditTree">
 			</div>
 		</div>
 		<div class="content">
-			<div class="item" v-for="(it,idx) in lstFileStruct" :key="idx" @click="onClickFormat(it)">{{it.name}}</div>
+			<div class="item" v-for="(it,idx) in lstFileStruct" :key="idx">
+				<div class="lbl" @click="onClickFormat(it)">{{it.name}}</div>
+				<div class="ctl-box" v-show="isEditTree">
+					<img class="btn" src="static/image/delete.png" alt="">
+				</div>
+			</div>
 		</div>
 	</div>
 	
@@ -27,6 +33,8 @@
 			</div>
 			<div class="title">{{selectStructInfo.name}}</div>
 			<div class="right-box">
+				<img class="btn" src="static/image/add.png" alt="" title="add struct" @click="onClickAddStruct()">
+				<img class="btn" src="static/image/edit.png" alt="" title="edit" @click="isEditTree=!isEditTree">
 				<!-- <div class="lbl-btn" :class="{'select':isShowStructView}" title="view struct" @click="onClickShowHideStructView()">C</div> -->
 			</div>
 		</div>
@@ -35,12 +43,17 @@
 		</div> -->
 		<div class="tree-content">
 			<div class="ctl-box">
-				<div class="btn" :class="{'select':isSelectAddress}" @click="onClickAddressBtn()">Address</div>
+				<div class="btn" :class="{'select':isSelectAddress}" @click="onClickAddressBtn()">{{'Address' + ((selectStructInfo && selectStructInfo.address!=selectStructInfo.editAddress) ? "*" : "&ensp;")}}</div>
 			</div>
 
-			<div class="item" v-for="(it,idx) in selectStructInfo.structs" v-show="!isShowStructView" :key="'a'+idx" :class="{'select':selectStruct===it}" @click="onClickStruct(it)">{{it.name + ((selectStruct===it&&editText!=originText) ? ' *':'')}}</div>
-
-			<div class="item" v-for="(it,idx) in selectStructInfo.structs" v-show="isShowStructView" :key="'b'+idx" :class="{'select':selectStruct===it}" @click="onClickStruct(it)">{{it.name + ((selectStruct===it&&editText!=originText) ? ' *':'')}}</div>
+			<div class="item" v-for="(it,idx) in selectStructInfo.structs" :key="idx" :class="{'select':selectStruct===it}">
+				<div class="lbl" @click="onClickStruct(it)">{{it.name + (it.textCache != it.editCache ? ' *':'')}}</div>
+				<div class="ctl-box" v-show="isEditTree">
+					<img class="btn" src="static/image/delete.png" alt="">
+				</div>
+			</div>
+			<!-- <div class="item" v-for="(it,idx) in selectStructInfo.structs" v-show="!isShowStructView" :key="'a'+idx" :class="{'select':selectStruct===it}" @click="onClickStruct(it)">{{it.name + (it.textCache != it.editCache ? ' *':'')}}</div> -->
+			<!-- <div class="item" v-for="(it,idx) in selectStructInfo.structs" v-show="isShowStructView" :key="'b'+idx" :class="{'select':selectStruct===it}" @click="onClickStruct(it)">{{it.name + (it.textCache != it.editCache ? ' *':'')}}</div> -->
 
 		</div>
 		<!-- <div class="tree-content" v-show="isShowStructView">
@@ -98,7 +111,12 @@ export default ctl;
 .home {
 	position: absolute; width: 100%; height: 100%; top: 0; left: 0;
 	>.top-box {
-		height: 60px; width: 100%; border-bottom: 1px solid #acacac;
+		height: 60px; width: 100%; border-bottom: 1px solid #acacac; @extend %ex-one-line; padding: 4px;
+		>.item {
+			cursor: pointer; display: inline-block; width: 46px; height: 52px; text-align: center; font-size: 12px; border: 1px solid #acacac; white-space: pre-wrap; vertical-align: top;
+			>span { position: relative; display: inline-block; top: 50%; transform: translateY(-50%); line-height: 14px; }
+			&:hover { background: #ececec; }
+		}
 	}
 
 	// >.center-box {
@@ -138,10 +156,24 @@ export default ctl;
 		}
 		>.content,>.tree-content {
 			position: absolute; left: 0; top: 30px; width: 100%; bottom: 0; overflow: hidden; overflow-y: auto; @include scrollbar(6px);
+			>.item {
+				position: relative;
+				>.ctl-box {
+					position: absolute; right: 4px; top: 0; height: 100%;
+					>.btn {
+						position: relative; display: inline-block; width: 16px; height: 16px;
+						&:hover { transform: scale(1.2) }
+					}
+				}
+			}
 		}
 		>.content {
 			>.item {
-				cursor: pointer; height: 36px; line-height: 36px; padding-left: 5px; font-size: 14px;
+				cursor: pointer; height: 36px; line-height: 36px; font-size: 14px;
+				>.lbl {
+					width: 100%; height: 100%; padding-left: 5px;
+				}
+				>.ctl-box>.btn { margin-top: 10px; }
 				&:hover { background: #e4e4e4; }
 			}
 		}
@@ -155,7 +187,12 @@ export default ctl;
 				}
 			}
 			>.item {
-				cursor: pointer; height: 24px; line-height: 24px; padding-left: 5px; font-size: 12px;
+				cursor: pointer; height: 24px; line-height: 24px; font-size: 12px;
+				>.lbl {
+					width: 100%; height: 100%; padding-left: 5px;
+					&:before { content: ''; display: inline-block; width: 6px; height: 6px; margin-right: 6px; background: #979797; border-radius: 3px; vertical-align: top; margin-top: 8px; }
+				}
+				>.ctl-box>.btn { margin-top: 3px; }
 				&:hover { background: #cfcfcf; }
 			}
 			.select { background: #e4e4e4; }
@@ -168,7 +205,7 @@ export default ctl;
 
 	>.hex-box {
 		position: absolute; background: #fff; left: 200px; bottom: 25px; width: 658px; height: 320px; border-top: 1px solid #acacac;
-		>.hex-fill-box { pointer-events: none; position: absolute; left: 85px; top: 24px; width: 406px; height: 273px; }
+		>.hex-fill-box { pointer-events: none; position: absolute; left: 85px; top: 24px; width: 406px; height: 288px; }
 	}
 	
 	>.config-box {

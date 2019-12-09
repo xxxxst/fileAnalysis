@@ -250,8 +250,7 @@ export default class HexView extends Vue {
 	}
 
 	destroyed() {
-		// document.oncontextmenu = this.oldOncontextmenu;
-		// document.removeEventListener("mousewheel", this.anoOnMousewheel);
+		this.onUpdateFile && this.onUpdateFile(null);
 	}
 
 	// anoOnMousewheel = (e)=>this.onMousewheel(e);
@@ -302,4 +301,18 @@ export default class HexView extends Vue {
 		// this.updateAddr(newVal);
 	}
 
-};
+	onKeydown(evt) {
+		// console.info(evt);
+		var slb = this.getVerScrollbar();
+
+		var keyCode = evt.keyCode;
+		if(keyCode == 40) {
+			// arrow down
+			slb.setValue(this.showStartRow + 1);
+		} else if(keyCode == 38) {
+			// arrow up
+			slb.setValue(this.showStartRow - 1);
+		}
+	}
+
+}

@@ -130,6 +130,14 @@ export default class MapPreview extends Vue {
 		this.bottomY = pos;
 
 		this.renderData = arr;
+
+		// this.arrSelectHightlightData = [];
+		// this.arrOverHightlightData = [];
+		// this.arrHightlightData = [];
+		// this.selectData = new OverDataStyle();
+		// this.overData = new OverDataStyle();
+		this.setHeighlightData(new OverDataStyle(), [], false);
+		this.setHeighlightData(new OverDataStyle(), [], true);
 		// console.info(arr);
 	}
 

@@ -85,11 +85,11 @@ export default class HexViewFill extends Vue {
 					continue;
 				}
 
-				var r1 = r1 - this.hexStartRow;
-				var r2 = r2 - this.hexStartRow;
-
 				var c1 = start - r1 * 16;
 				var c2 = (start + len - 1) - r2 * 16;
+
+				var r1 = r1 - this.hexStartRow;
+				var r2 = r2 - this.hexStartRow;
 
 				var x1 = c1 * w + 3;
 				var y1 = r1 * h;

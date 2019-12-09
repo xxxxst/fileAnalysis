@@ -14,6 +14,7 @@ export default class MonacoEditrCtl {
 	ele: HTMLDivElement = null;
 	mapStruct: Record<string, FileStruct> = {};
 	onUpdateText:Function = null;
+	onSave:Function = null;
 
 	fileType = "ana";
 
@@ -87,6 +88,11 @@ export default class MonacoEditrCtl {
 				autoClosingBrackets: "never",
 				fontFamily: "'simsunspace', 'simsun', Consolas, 'Courier New', monospace",
 				// fontFamily: "微软雅黑",
+			});
+
+			var local = this;
+			this.editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KEY_S, function() {
+				local.onSave && local.onSave();
 			});
 
 			// var md

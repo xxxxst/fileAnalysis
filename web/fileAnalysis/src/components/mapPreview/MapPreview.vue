@@ -43,7 +43,7 @@ export default ctl;
 		>.over-item,>.select-item { pointer-events: none; position: absolute; display: inline-block; }
 		>.select-item { border: 1px solid #5858ff; }
 		>.over-item { border: 1px solid #00f; }
-		>.bottom { position: absolute; left: 0; width: 100%; height: 50px; }
+		>.bottom { pointer-events: none; position: absolute; left: 0; width: 100%; height: 50px; }
 	}
 
 }

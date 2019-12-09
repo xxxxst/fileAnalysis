@@ -1,7 +1,7 @@
 <template>
 
 <div class="hex-view-fill">
-	<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="406" height="273">
+	<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="406" height="288">
 		<g :transform="'translate(0.5,0.5)'">
 			<template v-for="(it,idx) in renderData">
 				<polyline v-for="(it2,idx2) in it.attrs" :key="idx+'_'+idx2" :points="it2.path"/>
