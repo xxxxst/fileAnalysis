@@ -34,7 +34,7 @@ export default class MonacoEditrCtl {
 		monaco.languages.registerCompletionItemProvider("ana", {
 			triggerCharacters: [],
 			provideCompletionItems(model, position, context, token) {
-				var str = model.getLineContent(position.lineNumber).substr(0, position.column-1);
+				var str = model.getLineContent(position.lineNumber).substr(0, position.column-1).toLocaleLowerCase();
 				if(/\s/.test(str)) {
 					return { suggestions:[{ label:"", insertText:"", detail: ''}] };
 				}

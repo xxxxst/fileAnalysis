@@ -42,6 +42,7 @@ export default class MapPreview extends Vue {
 	
 	svgWidth = 100;
 	svgHeight = 100;
+	isShowHex = false;
 
 	renderData: RenderStruct[] = [];
 	selectData: OverDataStyle = new OverDataStyle();
@@ -78,6 +79,7 @@ export default class MapPreview extends Vue {
 		var pos = 50;
 		var rowHeight = 20;
 		var verGap = 20;
+		var leftStart = 50;
 		for(var i = 0; i < this.data.length; ++i) {
 			var data = this.data[i].data;
 			var rowCount = data.attrs.length;
@@ -86,31 +88,32 @@ export default class MapPreview extends Vue {
 			// md.name = data.name;
 			// md.rowCount = rowCount;
 			md.top = pos;
-			md.left = 100;
+			md.left = leftStart;
 
 			var head = [];
-			head.push(data.name);
+			// add head
+			var strHead = data.name;
+			if(data.len >= 0) {
+				strHead += "-" + data.len + "";
+			}
+			head.push(strHead);
+			head.push("Desc");
 			md.data.push(head);
 
 			for(var j = 0; j < data.attrs.length; ++j) {
-				// var row = new RenderRow();
-				// var attr = this.data[i].data.attrs[j];
-				// row.name = attr.name;
-				// md.attrs.push(row);
-
 				var row = [];
-				// if(j == 0) {
-				// 	row.push(data.name);
-				// } else {
+				// add attr name
 				row.push(data.attrs[j].name);
-				// }
+				row.push(data.attrs[j].desc);
 
 				for(var k = 0; k < this.data[i].arrItem.length; ++k) {
 					var it2 = this.data[i].arrItem[k];
+					// add address to head
 					if(j == 0) {
 						head.push("0x" + it2.address.toString(16).toUpperCase());
 					}
 					
+					// add value
 					if(j > it2.attrData.length) {
 						row.push("");
 					} else {
@@ -137,7 +140,7 @@ export default class MapPreview extends Vue {
 		// this.selectData = new OverDataStyle();
 		// this.overData = new OverDataStyle();
 		this.setHeighlightData(new OverDataStyle(), [], false);
-		this.setHeighlightData(new OverDataStyle(), [], true);
+		// this.setHeighlightData(new OverDataStyle(), [], true);
 		// console.info(arr);
 	}
 
@@ -153,7 +156,13 @@ export default class MapPreview extends Vue {
 		var rst = "";
 		for(var i = 0; i < val.length; ++i) {
 			if(i != 0) { rst += ","; }
-			rst += val[i];
+			var tmp = val[i];
+			if(typeof(tmp) == "number") {
+				if(this.isShowHex) {
+					tmp = "0x" + tmp.toString(16).toUpperCase();
+				}
+			}
+			rst += tmp;
 		}
 
 		return rst;
@@ -180,9 +189,10 @@ export default class MapPreview extends Vue {
 		this.hightlightData(idx, idx2, idx3, false);
 	}
 
-	hightlightData(idx:number, idx2:number, idx3:number, isOver:boolean) {
+	hightlightData(idx:number, idxRow:number, idxCol:number, isOver:boolean) {
 		var colWidth = 80;
-		var colFirstWidth = 100;
+		var colFirstWidth = 100 * 2;
+		var headCount = 2;
 		var rowHeight = 20;
 
 		var md = this.data[idx];
@@ -194,10 +204,10 @@ export default class MapPreview extends Vue {
 		var rst = new OverDataStyle();
 		
 		// over struct
-		if(idx2 == 0 && idx3 == 0) {
+		if(idxRow == 0 && idxCol < headCount) {
 			rst.left = left;
 			rst.top = top;
-			rst.width = colFirstWidth + (render.data[0].length - 1) * colWidth + 2;
+			rst.width = colFirstWidth + (render.data[0].length - headCount) * colWidth + 2;
 			rst.height = rowHeight * render.data.length + 2;
 
 			var hlData = [];
@@ -213,15 +223,15 @@ export default class MapPreview extends Vue {
 		}
 
 		// over col head
-		if(idx2 == 0) {
-			rst.left = left + colFirstWidth + (idx3 - 1) * colWidth + 1;
+		if(idxRow == 0) {
+			rst.left = left + colFirstWidth + (idxCol - headCount) * colWidth + 1;
 			rst.top = top;
 			rst.width = colWidth + 1;
 			rst.height = rowHeight * render.data.length + 2;
 
 			var hlData = [];
-			var addrIdx = md.arrItem[idx3-1].addrIdx;
-			for(var j = 0; j < md.arrItem[idx3-1].attrData.length; ++j) {
+			var addrIdx = md.arrItem[idxCol-headCount].addrIdx;
+			for(var j = 0; j < md.arrItem[idxCol-headCount].attrData.length; ++j) {
 				hlData.push([addrIdx, j]);
 			}
 
@@ -230,29 +240,29 @@ export default class MapPreview extends Vue {
 		}
 
 		// over row head
-		if(idx3 == 0) {
+		if(idxCol < headCount) {
 			rst.left = left;
-			rst.top = top + idx2 * rowHeight + 1;
-			rst.width = colFirstWidth + (render.data[0].length - 1) * colWidth + 2;
+			rst.top = top + idxRow * rowHeight + 1;
+			rst.width = colFirstWidth + (render.data[0].length - headCount) * colWidth + 2;
 			rst.height = rowHeight + 1;
 
 			var hlData = [];
 			for(var j = 0; j < md.arrItem.length; ++j) {
 				var addrIdx = md.arrItem[j].addrIdx;
-				hlData.push([addrIdx, idx2-1]);
+				hlData.push([addrIdx, idxRow-1]);
 			}
 
 			this.setHeighlightData(rst, hlData, isOver);
 			return;
 		}
 
-		rst.left = left + colFirstWidth + (idx3 - 1) * colWidth + 1;
-		rst.top = top + idx2 * rowHeight + 1;
+		rst.left = left + colFirstWidth + (idxCol - headCount) * colWidth + 1;
+		rst.top = top + idxRow * rowHeight + 1;
 		rst.width = colWidth + 1;
 		rst.height = rowHeight + 1;
 		
 		var hlData = [];
-		hlData.push([md.arrItem[idx3-1].addrIdx, idx2-1]);
+		hlData.push([md.arrItem[idxCol-headCount].addrIdx, idxRow-1]);
 
 		this.setHeighlightData(rst, hlData, isOver);
 	}
@@ -305,13 +315,18 @@ export default class MapPreview extends Vue {
 	}
 
 	onClickBack(evt) {
-		if(evt.target != this.$el) {
+		if(evt.target != this.$el && evt.target != this.$refs.content) {
 			return;
 		}
 
 		// this.selectData = new OverDataStyle();
 		// this.updateSelectDataStyle();
 		this.setHeighlightData(new OverDataStyle(), [], false);
+	}
+
+	onClickBtnHex() {
+		this.isShowHex = !this.isShowHex;
+		this.onDataChanged();
 	}
 
 }

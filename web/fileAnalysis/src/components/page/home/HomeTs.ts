@@ -31,10 +31,12 @@ export default class Home extends Vue {
 	oldOncontextmenu: any = null;
 
 	isInited = false;
+	isStaticMode = true;
 	isShowStructView = false;
 	isEditTree = false;
 	isSelectAddress = false;
 	hexStartRow = 0;
+	confirmDeleteIdx = -1;
 
 	lstFileStruct: FileStructInfo[] = [];
 	arrAddress: AddressMd[] = [];
@@ -94,8 +96,10 @@ export default class Home extends Vue {
 		
 		this.isDebug = !!window["__debug__"];
 
+		this.isStaticMode = (MainModel.ins.static == "1");
 		if(this.isDebug) {
 			MainModel.ins.serverUrl = "http://localhost:8093/fileAnalysis/server/";
+			this.isStaticMode = false;
 		}
 
 		this.mapTypeLen = {
@@ -120,7 +124,7 @@ export default class Home extends Vue {
 		MainModel.ins.home = this;
 
 		this.monacoEditCtl.onUpdateText = (e)=>this.onUpdateText(e);
-		this.monacoEditCtl.onSave = ()=>this.onSave();
+		this.monacoEditCtl.onSave = ()=>this.onRefreshData();
 		this.monacoEditCtl.initGlobalMonacoEditor();
 		// this.initGlobalMonacoEditor();
 
@@ -140,6 +144,16 @@ export default class Home extends Vue {
 		this.monacoEditCtl.ele = ele;
 		this.monacoEditCtl.init();
 		// this.initMonacoEditor();
+
+		// var eleFile = this.$refs.fileData as HTMLInputElement;
+		// eleFile.addEventListener("change", (e)=>this.onLoadData(e));
+		
+		// this.$nextTick(()=> {
+		// 	this.onSizeChanged();
+		// });
+		setTimeout(()=> {
+			this.onSizeChanged();
+		}, 100);
 	}
 
 	destroyed() {
@@ -150,37 +164,84 @@ export default class Home extends Vue {
 	}
 
 	async loadData() {
+		if(this.isStaticMode) {
+			this.isInited = true;
+			return;
+		}
+
 		var url = `${MainModel.ins.serverUrl}file/get/1/data/fileStruct.json`;
 		try {
 			var res = await axios.get(url);
 			if(typeof(res.data) == "object") {
-				var rst = [];
-				for(var i = 0; i < res.data.length; ++i) {
-					var tmp = new FileStructInfo();
-					tmp.name = res.data[i].name;
-					tmp.suffix = res.data[i].suffix;
-					tmp.address = res.data[i].address;
-					tmp.editAddress = res.data[i].address;
-					for(var j = 0; j < res.data[i].structs.length; ++j) {
-						var struct = res.data[i].structs[j];
-						var tmp2 = StructFormatCtl.textToFileStruct(struct.textCache);
-						if(tmp2) {
-							tmp.structs.push(tmp2);
-						}
-					}
-					rst.push(tmp);
-				}
-				this.lstFileStruct = rst;
-				// this.lstFileStruct = res.data;
+				this.formatOriginData(res.data);
+				// var rst = [];
+				// for(var i = 0; i < res.data.length; ++i) {
+				// 	var tmp = new FileStructInfo();
+				// 	tmp.name = res.data[i].name;
+				// 	tmp.suffix = res.data[i].suffix;
+				// 	tmp.address = res.data[i].address;
+				// 	tmp.editAddress = res.data[i].address;
+				// 	for(var j = 0; j < res.data[i].structs.length; ++j) {
+				// 		var struct = res.data[i].structs[j];
+				// 		var tmp2 = StructFormatCtl.textToFileStruct(struct.textCache);
+				// 		if(tmp2) {
+				// 			tmp.structs.push(tmp2);
+				// 		}
+				// 	}
+				// 	rst.push(tmp);
+				// }
+				// this.lstFileStruct = rst;
 			}
 			// console.info(rst.data);
 		} catch(ex) {}
 
 		this.isInited = true;
 
-		this.$nextTick(()=> {
-			this.onSizeChanged();
-		});
+		// this.$nextTick(()=> {
+		// 	this.onSizeChanged();
+		// });
+	}
+
+	formatOriginData(data) {
+		var rst = [];
+		for(var i = 0; i < data.length; ++i) {
+			var tmp = new FileStructInfo();
+			tmp.name = data[i].name;
+			tmp.suffix = data[i].suffix;
+			tmp.address = data[i].address;
+			tmp.editAddress = data[i].address;
+			for(var j = 0; j < data[i].structs.length; ++j) {
+				var struct = data[i].structs[j];
+				var tmp2 = StructFormatCtl.textToFileStruct(struct.textCache);
+				if(tmp2) {
+					tmp.structs.push(tmp2);
+				}
+			}
+			rst.push(tmp);
+		}
+		this.lstFileStruct = rst;
+	}
+
+	getSaveData() {
+		var data = [];
+		for(var i = 0; i < this.lstFileStruct.length; ++i) {
+			var it = this.lstFileStruct[i];
+			var tmp: any = {};
+			tmp.name = it.name;
+			tmp.suffix = it.suffix;
+			tmp.address = it.address;
+			tmp.structs = [];
+			for(var j = 0; j < it.structs.length; ++j) {
+				var it2 = it.structs[j];
+				tmp.structs.push({
+					name: it2.name,
+					desc: it2.desc,
+					textCache: it2.textCache,
+				});
+			}
+			data.push(tmp);
+		}
+		return data;
 	}
 
 	getHexView() {
@@ -343,8 +404,9 @@ export default class Home extends Vue {
 		}
 	}
 
-	onClickFormat(it:FileStructInfo) {
+	onClickParser(it:FileStructInfo) {
 		this.isEditTree = false;
+		this.confirmDeleteIdx = -1;
 		
 		this.selectStructInfo = it;
 		// this.arrSelectStructAddr = it.structs;
@@ -364,6 +426,12 @@ export default class Home extends Vue {
 		this.monacoEditCtl.mapStruct = map;
 		// this.mapStruct = map;
 
+		// calc struct length
+		for(var i = 0; i < it.structs.length; ++i) {
+			var name = it.structs[i].name;
+			it.structs[i].len = this.calcStructLen(name);
+		}
+
 		this.formatAddress();
 	}
 
@@ -373,7 +441,7 @@ export default class Home extends Vue {
 			return;
 		}
 
-		this.arrAddress = StructFormatCtl.textToAddress(md.address);
+		this.arrAddress = StructFormatCtl.textToAddress(md.editAddress);
 
 		// var rst = [];
 		// var arr = md.address.replace(/\r\n/g, "\n").split("\n");
@@ -396,7 +464,10 @@ export default class Home extends Vue {
 		}
 	}
 
-	calcStructLen(name, outAttrLen:Array<number>=null) {
+	calcStructLen(name, outAttrLen:Array<number>=null, deep=0) {
+		if(deep > 10) {
+			return 0;
+		}
 		var map = this.monacoEditCtl.mapStruct;
 		if(!(name in map)) {
 			return 0;
@@ -422,7 +493,7 @@ export default class Home extends Vue {
 				break;
 			}
 
-			var tmp = this.calcStructLen(type);
+			var tmp = this.calcStructLen(type, null, deep+1);
 			if(arr[i].arrayLength >= 0) {
 				tmp = tmp * arr[i].arrayLength;
 			}
@@ -438,26 +509,25 @@ export default class Home extends Vue {
 
 		var type = attr.type;
 		if(type in this.mapTypeLen) {
-			var tmp = this.mapTypeLen[type];
+			var len = this.mapTypeLen[type];
 			if(attr.arrayLength >= 0) {
-				tmp = tmp * attr.arrayLength;
+				len = len * attr.arrayLength;
 			}
-			return tmp;
+			return len;
 		}
 
 		if(!(type in map)) {
 			return 0;
 		}
 
-		var tmp = this.calcStructLen(type);
+		var len = this.calcStructLen(type);
 		if(attr.arrayLength >= 0) {
-			tmp = tmp * attr.arrayLength;
+			len = len * attr.arrayLength;
 		}
-		return tmp;
+		return len;
 	}
 
 	calcAddress() {
-		// console.info("aaa");
 		var map = this.monacoEditCtl.mapStruct;
 		for(var i = 0; i < this.arrAddress.length; ++i) {
 			var md = this.arrAddress[i];
@@ -474,6 +544,7 @@ export default class Home extends Vue {
 			var arr = [];
 			var attrs = [];
 			md.len = this.calcStructLen(md.name, arr);
+			// md.len = map[md.name].len;
 			var pos = md.realAddr;
 			for(var j = 0; j < arr.length; ++j) {
 				var tmp = new AddressAttrMd();
@@ -636,10 +707,29 @@ export default class Home extends Vue {
 		// this.colMinLength = [0, 0, 0, 0];
 
 		this.isEditTree = false;
+		this.confirmDeleteIdx = -1;
 	}
 
-	onClickAddFormat() {
-		
+	onClickAddParser() {
+		this.isEditTree = true;
+		this.confirmDeleteIdx = -1;
+		this.needSaveToServer = true;
+
+		var md = new FileStructInfo();
+		md.name = ".ico";
+		var idx = this.lstFileStruct.length;
+		this.lstFileStruct.push(md);
+
+		this.$nextTick(()=>{
+			var ele = this.$refs["muParserInput_" + idx] as any;
+			// console.info(ele);
+			if(ele && ele[0]) {
+				ele = ele[0];
+			}
+			if(ele) {
+				ele.focus();
+			}
+		});
 	}
 
 	onClickAddStruct() {
@@ -650,10 +740,14 @@ export default class Home extends Vue {
 		this.needSave = true;
 		this.needSaveToServer = true;
 
-		var strTemplate = "[Struct | Desc]\r\n\r\nbyte\tkey;// desc\r\n";
+		var strTemplate = "[Struct | ]\r\n\r\nbyte\tkey;// desc\r\n";
 		var md = StructFormatCtl.textToFileStruct(strTemplate);
 		md.textCache = "";
 		this.selectStructInfo.structs.push(md);
+
+		// var tmp = new StructAddressMd();
+		// tmp.data = md;
+		// this.arrSelectStructAddr.push(tmp);
 
 		this.onClickStruct(md);
 	}
@@ -699,6 +793,7 @@ export default class Home extends Vue {
 		this.originText = it.textCache;
 
 		this.isEditTree = false;
+		this.confirmDeleteIdx = -1;
 
 		// this.updateText();
 	}
@@ -756,7 +851,7 @@ export default class Home extends Vue {
 	// 	this.changeMonacoTextInner = false;
 	// }
 
-	onSave() {
+	onRefreshData() {
 		// if(!this.selectStructInfo) {
 		// 	return;
 		// }
@@ -776,8 +871,9 @@ export default class Home extends Vue {
 		// }
 		for(var i = 0; i < this.lstFileStruct.length; ++i) {
 			var md = this.lstFileStruct[i];
+			md.address = md.editAddress;
 			if(md == this.selectStructInfo) {
-				md.address = md.editAddress;
+				// md.address = md.editAddress;
 				if(this.isSelectAddress) {
 					this.originText = md.address;
 				}
@@ -803,10 +899,51 @@ export default class Home extends Vue {
 				}
 			}
 		}
-		this.onClickFormat(this.selectStructInfo);
+		this.onClickParser(this.selectStructInfo);
 		// this.formatAddress();
 
 		// this.saveToServer();
+	}
+
+	onLoadData(evt) {
+		var ele = this.$refs.fileData as HTMLInputElement;
+		var file = ele.files && ele.files[0];
+		if(!file) {
+			return;
+		}
+
+		this.loadDataFromLocal(file);
+	}
+
+	loadDataFromLocal(file) {
+		var local = this;
+
+		var reader = new FileReader();
+		reader.onloadend = function(evt2) {
+			var rst = evt2.target.result as any;
+			try{
+				var obj = JSON.parse(rst);
+				local.formatOriginData(obj);
+			}catch(ex) {}
+		}
+		reader.readAsText(file);
+	}
+
+	onDownloadData() {
+		if(this.isStaticMode) {
+			this.needSaveToServer = false;
+		}
+		
+		this.onRefreshData();
+	
+		var data = this.getSaveData();
+		var blob = new Blob([JSON.stringify(data)]);
+		var ele = document.createElement('a');
+		ele.download = "fileStruct.json";
+		ele.href = URL.createObjectURL(blob);;
+		document.body.appendChild(ele);
+		ele.click();
+		document.body.appendChild(ele);
 	}
 
 	onSaveToServer() {
@@ -819,33 +956,34 @@ export default class Home extends Vue {
 		}
 		this.needSaveToServer = false;
 
-		this.onSave();
+		this.onRefreshData();
 
 		this.saveToServer();
 	}
 
 	async saveToServer() {
-		this.isDoSaveToServer = true;
+		// var data = [];
+		// for(var i = 0; i < this.lstFileStruct.length; ++i) {
+		// 	var it = this.lstFileStruct[i];
+		// 	var tmp: any = {};
+		// 	tmp.name = it.name;
+		// 	tmp.suffix = it.suffix;
+		// 	tmp.address = it.address;
+		// 	tmp.structs = [];
+		// 	for(var j = 0; j < it.structs.length; ++j) {
+		// 		var it2 = it.structs[j];
+		// 		tmp.structs.push({
+		// 			name: it2.name,
+		// 			desc: it2.desc,
+		// 			textCache: it2.textCache,
+		// 		});
+		// 	}
+		// 	data.push(tmp);
+		// }
+		var data = this.getSaveData();
 
-		var data = [];
-		for(var i = 0; i < this.lstFileStruct.length; ++i) {
-			var it = this.lstFileStruct[i];
-			var tmp: any = {};
-			tmp.name = it.name;
-			tmp.suffix = it.suffix;
-			tmp.address = it.address;
-			tmp.structs = [];
-			for(var j = 0; j < it.structs.length; ++j) {
-				var it2 = it.structs[j];
-				tmp.structs.push({
-					name: it2.name,
-					desc: it2.desc,
-					textCache: it2.textCache,
-				});
-			}
-			data.push(tmp);
-		}
-		
+		// save to server
+		this.isDoSaveToServer = true;
 		var url = `${MainModel.ins.serverUrl}file/saveString`;
 		var md = {
 			path: "data/fileStruct.json",
@@ -863,6 +1001,60 @@ export default class Home extends Vue {
 	anoOnHightlightChanged = (d)=>this.onHightlightChanged(d);
 	onHightlightChanged(hlData) {
 		this.arrHightlightData = hlData;
+	}
+
+	onChangeParserName() {
+		this.needSaveToServer = true;
+	}
+
+	onEnterParserName() {
+		this.isEditTree = false;
+		this.confirmDeleteIdx = -1;
+	}
+
+	onClickMenuEdit() {
+		this.isEditTree=!this.isEditTree;
+		this.confirmDeleteIdx = -1;
+	}
+
+	onClickMenuItemDelete(idx) {
+		if(idx == this.confirmDeleteIdx) {
+			this.confirmDeleteIdx = -1;
+			return;
+		}
+		this.confirmDeleteIdx = idx;
+	}
+	
+	onClickMenuItemDeleteSure() {
+		if(this.confirmDeleteIdx < 0) {
+			return;
+		}
+		if(!this.selectStructInfo) {
+			// remove parser
+			this.lstFileStruct.splice(this.confirmDeleteIdx, 1);
+		} else {
+			// remove struct
+			if(this.selectStruct == this.selectStructInfo[this.confirmDeleteIdx]) {
+				this.selectStruct = null;
+				this.viewFileTitle = "";
+				this.monacoEditCtl.editor.updateOptions({ readOnly: true });
+				this.monacoEditCtl.setValue("");
+				this.originText = "";
+				this.editText = "";
+			}
+			// var name = this.selectStructInfo.structs[this.confirmDeleteIdx].name;
+			this.selectStructInfo.structs.splice(this.confirmDeleteIdx, 1);
+			// this.arrSelectStructAddr.splice(this.confirmDeleteIdx, 1);
+			// for(var i = this.arrAddress.length - 1; i >= 0; --i) {
+			// 	if(this.arrAddress[i].name == name) {
+			// 		this.arrAddress.splice(i, 1);
+			// 	}
+			// }
+			// // this.arrAddress = StructFormatCtl.textToAddress(this.selectStructInfo.editAddress);
+			// delete this.monacoEditCtl.mapStruct[this.selectStruct.name];
+		}
+		this.needSaveToServer = true;
+		this.confirmDeleteIdx = -1;
 	}
 
 }

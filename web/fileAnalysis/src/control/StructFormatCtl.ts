@@ -6,6 +6,7 @@ export default class StructFormatCtl {
 	static regAttr2 = /^\s*(\S+)\s+(\S+)\s*;\s*\/\/\s*(\S*)\s*$/;
 	static regAttrType1 = /^([a-zA-Z_$][a-zA-Z_$0-9]*)\[(\s*[0-9]+\s*)\]$/;
 	static regAttrType2 = /^([a-zA-Z_$][a-zA-Z_$0-9]*)$/;
+	static regAddress = /^\s*([a-zA-Z_$][a-zA-Z_$0-9]*)\s*(.*?)\s*$/;
 	
 	static textToFileStruct(text:string) {
 		var arr = text.replace(/\r\n/g, "\n").split("\n");
@@ -83,15 +84,16 @@ export default class StructFormatCtl {
 		var rst = [];
 		var arr = text.replace(/\r\n/g, "\n").split("\n");
 		for(var i = 0; i < arr.length; ++i) {
-			var idx = arr[i].indexOf("	");
-			if(idx < 0) {
+			var tmp = this.regAddress.exec(arr[i]);
+			if(!tmp) {
 				continue;
 			}
-			var tmp = new AddressMd();
-			tmp.name = arr[i].substr(0, idx);
-			tmp.address = arr[i].substr(idx+1);
 
-			rst.push(tmp);
+			var md = new AddressMd();
+			md.name = tmp[1];
+			md.address = tmp[2];
+
+			rst.push(md);
 		}
 
 		return rst;

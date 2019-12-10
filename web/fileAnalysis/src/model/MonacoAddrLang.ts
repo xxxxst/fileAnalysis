@@ -3,7 +3,7 @@ import * as monaco from "monaco-editor";
 
 export var conf = {
     comments: {
-        lineComment: '#'
+        lineComment: '//'
     },
     brackets: [
         ['[', ']'],

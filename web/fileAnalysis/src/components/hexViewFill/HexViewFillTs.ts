@@ -109,7 +109,7 @@ export default class HexViewFill extends Vue {
 				var x3 = 16 * w + 3;
 				var y3 = y2 - (h-3);
 				var x4 = 3;
-				var y4 = y2 - h;
+				var y4 = y1 + (h-3);
 
 				str += `${x1},${y1} ${x3},${y1} ${x3},${y3}, ${x2},${y3} ${x2},${y2} ${x4},${y2} ${x4},${y4} ${x1},${y4} ${x1},${y1}`;
 				md.path = str;

@@ -13,6 +13,7 @@ export class FileStruct {
 	// address = "";
 	textCache = "";
 	editCache = "";
+	len = -1;
 	attrs: FileStructAttr[] = [];
 
 	// _editTextCache = "";

@@ -13,6 +13,7 @@ export default class MainModel{
 	staticUrl = "";
 	// serverUrl:string = "/server/";
 	serverUrl = "/server/";
+	static = "1";
 
 	isDebug = false;
 

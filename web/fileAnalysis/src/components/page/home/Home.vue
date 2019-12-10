@@ -2,31 +2,39 @@
 
 <div class="home" v-show="isInited">
 	<div class="top-box">
-		<div class="item" @click="onSaveToServer()"><span>{{'Save' + (needSaveToServer ? "\n*" : "")}}</span></div>
+		<div class="item" v-show="!isStaticMode" @click="onSaveToServer()"><span>{{'Save' + (needSaveToServer ? "\n*" : "")}}</span></div>
+		<div class="item" v-show="isStaticMode"><span>Load</span><div class="file-box"><input type="file" accept=".json" ref="fileData" @change="onLoadData($event)"></div></div>
+		<div class="item" @click="onDownloadData()"><span>{{'Download' + (isStaticMode&&needSaveToServer ? "\n*" : "")}}</span></div>
 	</div>
 	
-	<div class="tree-box" v-if="!selectStructInfo">
+	<!-- parser -->
+	<div class="tree-box tree-parser" v-if="!selectStructInfo">
 		<div class="head">
 			<div class="left-box">
 				<img class="ico" src="static/image/select.png" alt="">
 			</div>
-			<div class="title">选择格式</div>
+			<div class="title">Select Parser</div>
 			<div class="right-box">
-				<img class="btn" src="static/image/add.png" alt="" title="add parser" @click="onClickAddFormat()">
-				<img class="btn" src="static/image/edit.png" alt="" title="edit" @click="isEditTree=!isEditTree">
+				<img class="btn" src="static/image/add.png" alt="" title="add parser" @click="onClickAddParser()">
+				<img class="btn" src="static/image/edit.png" alt="" title="edit" @click="onClickMenuEdit()">
 			</div>
 		</div>
 		<div class="content">
 			<div class="item" v-for="(it,idx) in lstFileStruct" :key="idx">
-				<div class="lbl" @click="onClickFormat(it)">{{it.name}}</div>
+				<div class="lbl" @click="onClickParser(it)">{{it.name}}</div>
+				<div class="input-box" v-show="isEditTree">
+					<input type="text" :ref="'muParserInput_' + idx" v-model="it.name" v-noSpell @change="onChangeParserName()" @keyup.enter="onEnterParserName()">
+				</div>
 				<div class="ctl-box" v-show="isEditTree">
-					<img class="btn" src="static/image/delete.png" alt="">
+					<div class="ok-box" v-if="idx==confirmDeleteIdx" @click="onClickMenuItemDeleteSure()">Del</div>
+					<img class="btn" src="static/image/delete.png" alt="" @click="onClickMenuItemDelete(idx)">
 				</div>
 			</div>
 		</div>
 	</div>
 	
-	<div class="tree-box" v-if="selectStructInfo">
+	<!-- structs -->
+	<div class="tree-box tree-struct" v-if="selectStructInfo">
 		<div class="head">
 			<div class="left-box">
 				<img class="btn" src="static/image/back.png" alt="" @click="onClickBack()">
@@ -34,22 +42,23 @@
 			<div class="title">{{selectStructInfo.name}}</div>
 			<div class="right-box">
 				<img class="btn" src="static/image/add.png" alt="" title="add struct" @click="onClickAddStruct()">
-				<img class="btn" src="static/image/edit.png" alt="" title="edit" @click="isEditTree=!isEditTree">
+				<img class="btn" src="static/image/edit.png" alt="" title="edit" @click="onClickMenuEdit()">
 				<!-- <div class="lbl-btn" :class="{'select':isShowStructView}" title="view struct" @click="onClickShowHideStructView()">C</div> -->
 			</div>
 		</div>
 		<!-- <div class="tree-content" v-show="!isShowStructView">
 			<div class="item" v-for="(it,idx) in selectStructInfo.routes" :key="idx" :class="{'select':selectRootStruct===it}" @click="onClickRootStruct(it)">{{it.name + ((selectRootStruct===it&&editText!=originText) ? ' *':'')}}</div>
 		</div> -->
-		<div class="tree-content">
-			<div class="ctl-box">
+		<div class="content">
+			<div class="top-ctl-box">
 				<div class="btn" :class="{'select':isSelectAddress}" @click="onClickAddressBtn()">{{'Address' + ((selectStructInfo && selectStructInfo.address!=selectStructInfo.editAddress) ? "*" : "&ensp;")}}</div>
 			</div>
 
 			<div class="item" v-for="(it,idx) in selectStructInfo.structs" :key="idx" :class="{'select':selectStruct===it}">
 				<div class="lbl" @click="onClickStruct(it)">{{it.name + (it.textCache != it.editCache ? ' *':'')}}</div>
 				<div class="ctl-box" v-show="isEditTree">
-					<img class="btn" src="static/image/delete.png" alt="">
+					<div class="ok-box" v-if="idx==confirmDeleteIdx" @click="onClickMenuItemDeleteSure()">Del</div>
+					<img class="btn" src="static/image/delete.png" alt="" @click="onClickMenuItemDelete(idx)">
 				</div>
 			</div>
 			<!-- <div class="item" v-for="(it,idx) in selectStructInfo.structs" v-show="!isShowStructView" :key="'a'+idx" :class="{'select':selectStruct===it}" @click="onClickStruct(it)">{{it.name + (it.textCache != it.editCache ? ' *':'')}}</div> -->
@@ -61,10 +70,12 @@
 		</div> -->
 	</div>
 
+	<!-- map -->
 	<div class="map-box">
 		<MapPreview :data="arrSelectStructAddr" :onHightlightChanged="anoOnHightlightChanged"/>
 	</div>
 	
+	<!-- hex view -->
 	<div class="hex-box">
 		<HexView ref="hexView" :onUpdateFile="anoOnUpdateFile" :onScroll="anoOnHexViewScroll"/>
 		<div class="hex-fill-box">
@@ -72,6 +83,7 @@
 		</div>
 	</div>
 
+	<!-- eidt -->
 	<div class="config-box">
 		<div class="title">
 			<div class="lbl">{{viewFileTitle + ((editText!=originText) ? ' *':'')}}</div>
@@ -85,6 +97,7 @@
 		<!-- <SimpleMonacoEditor class="text-edit" ref="smEditor"/> -->
 	</div>
 
+	<!-- status bar -->
 	<div class="bottom-box">
 		<span style="padding-left:5px;">{{log}}</span>
 	</div>
@@ -104,7 +117,6 @@ export default ctl;
 } */
 </style>
 
-
 <style lang="scss">
 @import "/src/assets/css/style.scss";
 
@@ -113,8 +125,12 @@ export default ctl;
 	>.top-box {
 		height: 60px; width: 100%; border-bottom: 1px solid #acacac; @extend %ex-one-line; padding: 4px;
 		>.item {
-			cursor: pointer; display: inline-block; width: 46px; height: 52px; text-align: center; font-size: 12px; border: 1px solid #acacac; white-space: pre-wrap; vertical-align: top;
+			cursor: pointer; position: relative; display: inline-block; width: 80px; height: 40px; text-align: center; font-size: 12px; border: 1px solid #acacac; white-space: pre-wrap; vertical-align: top; margin-right: 4px; overflow: hidden;
 			>span { position: relative; display: inline-block; top: 50%; transform: translateY(-50%); line-height: 14px; }
+			>.file-box{
+				cursor: pointer; position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+				>input { cursor: pointer; width: 100%; height: 100%; opacity: 0; padding-left: 200px; }
+			}
 			&:hover { background: #ececec; }
 		}
 	}
@@ -138,7 +154,7 @@ export default ctl;
 			// 	}
 			// }
 			// position: relative; height: 30px;
-			>.title { display: inline-block; height: 30px; line-height: 30px; vertical-align: top; font-size: 14px; margin-left: 2px; }
+			>.title { display: inline-block; height: 30px; line-height: 30px; vertical-align: top; font-size: 12px; margin-left: 2px; }
 			>.left-box,>.right-box {
 				display: inline-block;
 				>.ico,>.btn,>.lbl-btn { width: 18px; height: 18px; line-height: 18px; margin-top: 6px; margin-right: 4px; }
@@ -154,32 +170,49 @@ export default ctl;
 				position: absolute; top: 0; right: 0;
 			}
 		}
-		>.content,>.tree-content {
+		>.content {
 			position: absolute; left: 0; top: 30px; width: 100%; bottom: 0; overflow: hidden; overflow-y: auto; @include scrollbar(6px);
 			>.item {
-				position: relative;
+				cursor: pointer; position: relative; height: 36px; line-height: 36px; font-size: 14px;
+				>.lbl {
+					width: 100%; height: 100%; padding-left: 5px;
+					&:hover { background: #cfcfcf; }
+				}
 				>.ctl-box {
 					position: absolute; right: 4px; top: 0; height: 100%;
+					>.ok-box { position: relative; display: inline-block; font-size: 12px; height: 100%; background: #cfcfcf; margin-right: 4px; padding: 0 4px; border-radius: 2px; vertical-align: top; }
 					>.btn {
 						position: relative; display: inline-block; width: 16px; height: 16px;
 						&:hover { transform: scale(1.2) }
 					}
 				}
 			}
+			.select { background: #e4e4e4; }
 		}
-		>.content {
-			>.item {
-				cursor: pointer; height: 36px; line-height: 36px; font-size: 14px;
-				>.lbl {
-					width: 100%; height: 100%; padding-left: 5px;
-				}
-				>.ctl-box>.btn { margin-top: 10px; }
-				&:hover { background: #e4e4e4; }
+		// >.content {
+		// 	>.item {
+				
+				
+		// 		>.ctl-box>.btn { margin-top: 10px; }
+		// 		&:hover { background: #e4e4e4; }
+		// 	}
+		// }
+		// >.tree-content {
+			
+		// }
+	}
+	>.tree-parser {
+		>.content>.item {
+			>.input-box {
+				position: absolute; left: 0; top: 0; right: 0; height: 100%; background: #fff; padding-left: 5px;
+				>input { width: 100%; height: 100%; background: transparent; border: 0; vertical-align: top; border-bottom: 1px solid #cfcfcf; }
 			}
 		}
-		>.tree-content {
-			>.root { height: 24px; line-height: 24px; padding-left: 5px; background: #f5f5f5; }
-			>.ctl-box {
+	}
+	>.tree-struct {
+		>.content {
+			// >.root { height: 24px; line-height: 24px; padding-left: 5px; background: #f5f5f5; }
+			>.top-ctl-box {
 				height: 30px; line-height: 30px; border-bottom: 1px solid #acacac; @extend %ex-one-line;
 				>.btn {
 					cursor: default; display: inline-block; height: 100%; padding: 0 6px; font-size: 12px; vertical-align: top;
@@ -187,15 +220,12 @@ export default ctl;
 				}
 			}
 			>.item {
-				cursor: pointer; height: 24px; line-height: 24px; font-size: 12px;
+				height: 24px; line-height: 24px; font-size: 12px;
 				>.lbl {
-					width: 100%; height: 100%; padding-left: 5px;
 					&:before { content: ''; display: inline-block; width: 6px; height: 6px; margin-right: 6px; background: #979797; border-radius: 3px; vertical-align: top; margin-top: 8px; }
 				}
 				>.ctl-box>.btn { margin-top: 3px; }
-				&:hover { background: #cfcfcf; }
 			}
-			.select { background: #e4e4e4; }
 		}
 	}
 
