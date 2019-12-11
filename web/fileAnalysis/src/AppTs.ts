@@ -25,7 +25,6 @@ export default class App extends Vue {
 	}
 
 	created() {
-		// $(window).resize(this.onSizeChanged);
 		if (document.addEventListener) {
 			window.addEventListener("resize", () => this.onSizeChanged(), false);
 		} else {

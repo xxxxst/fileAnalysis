@@ -22,6 +22,7 @@ import MapPreview from 'src/components/mapPreview/MapPreview.vue';
 import HexViewFill from 'src/components/hexViewFill/HexViewFill.vue';
 import IHexViewFill from 'src/components/hexViewFill/HexViewFillTs';
 import StructFormatCtl from 'src/control/StructFormatCtl';
+import ComUtil from 'src/util/ComUtil';
 
 @Component({ components: { HexView, HexViewFill, SimpleMonacoEditor, MapPreview }})
 export default class Home extends Vue {
@@ -64,6 +65,14 @@ export default class Home extends Vue {
 
 	@VIgnore()
 	monacoEditCtl: MonacoEditrCtl = new MonacoEditrCtl();
+
+	isDragMenu = false;
+	dragIdx = -1;
+	dragItemText = "";
+	dragPointerStyle = {
+		top: "0px"
+	};
+	dragNewIdx = -1;
 
 	// @VIgnore()
 	// textMd: TextMd = null;
@@ -133,27 +142,29 @@ export default class Home extends Vue {
 	
 	mounted() {
 		this.oldOncontextmenu = document.oncontextmenu;
+		window.addEventListener("dragover", this.anoOnDragover, false);
+		window.addEventListener("drag", this.onDrag, false);
 		document.oncontextmenu = function () { return false; };
 		document.ondragover = evt=>evt.preventDefault();
 		// document.ondrop = (evt)=>{ this.isDraggingFile = false; evt.preventDefault(); };
 		document.addEventListener("keydown", this.anoOnKeydown, { passive: false });
 		document.addEventListener("keyup", this.anoOnKeyup, { passive: false });
 		document.addEventListener("mousewheel", this.anoOnMousewheel, { passive: false });
+		// document.addEventListener("mousemove", this.anoOnDocumentMousemove, { passive: false });
+		document.addEventListener("mouseup", this.anoOnDocumentMouseup, { passive: false });
 
-		var ele:any = this.$refs.textEdit;
-		this.monacoEditCtl.ele = ele;
-		this.monacoEditCtl.init();
 		// this.initMonacoEditor();
 
 		// var eleFile = this.$refs.fileData as HTMLInputElement;
 		// eleFile.addEventListener("change", (e)=>this.onLoadData(e));
 		
-		// this.$nextTick(()=> {
-		// 	this.onSizeChanged();
-		// });
-		setTimeout(()=> {
+		var ele:any = this.$refs.textEdit;
+		this.monacoEditCtl.ele = ele;
+		this.monacoEditCtl.init();
+
+		ComUtil.waitElementLoaded(this.$refs.textEdit).then(()=> {
 			this.onSizeChanged();
-		}, 100);
+		});
 	}
 
 	destroyed() {
@@ -161,6 +172,20 @@ export default class Home extends Vue {
 		document.removeEventListener("keydown", this.anoOnKeydown);
 		document.removeEventListener("keydown", this.anoOnKeyup);
 		document.removeEventListener("mousewheel", this.anoOnMousewheel);
+		// document.removeEventListener("mousemove", this.anoOnDocumentMousemove);
+		document.removeEventListener("mouseup", this.anoOnDocumentMouseup);
+		window.removeEventListener("dragover", this.anoOnDragover, false);
+		window.removeEventListener("drag", this.onDrag, false);
+	}
+
+	anoOnDragover = (e) =>this.onDragover(e);
+	onDragover(evt) {
+		evt.preventDefault();
+	}
+
+	anoOnDrag = (e) =>this.onDrag(e);
+	onDrag(evt) {
+		evt.preventDefault();
 	}
 
 	async loadData() {
@@ -688,23 +713,50 @@ export default class Home extends Vue {
 		return rst;
 	}
 
-	onClickBack() {
-		this.viewFileTitle = "";
-		this.selectStructInfo = null;
+	unselectParser() {
+		this.unselectAddress();
+		this.unselectStruct();
+
 		this.arrSelectStructAddr = [];
-		// this.selectRootStruct = null;
-		this.selectStruct = null;
-		this.isSelectAddress = false;
 		this.monacoEditCtl.mapStruct = {};
+		this.arrAddress = [];
+		this.selectStructInfo = null;
+	}
+
+	unselectAddress() {
+		if(!this.isSelectAddress) {
+			return;
+		}
+		this.viewFileTitle = "";
+		this.isSelectAddress = false;
 		this.monacoEditCtl.editor.updateOptions({ readOnly: true });
 		this.monacoEditCtl.setValue("");
-		this.arrAddress = [];
-		// this.mapStruct = {};
-		// // this.monacoModel.setValue("");
-		// this.editor.updateOptions({ readOnly: true });
-		// this.setMonacoTextInner("");
-		this.originText = "";
-		// this.colMinLength = [0, 0, 0, 0];
+		this.originText = this.editText = "";
+	}
+
+	unselectStruct() {
+		if(!this.selectStruct) {
+			return;
+		}
+		this.viewFileTitle = "";
+		this.selectStruct = null;
+		this.monacoEditCtl.editor.updateOptions({ readOnly: true });
+		this.monacoEditCtl.setValue("");
+		this.originText = this.editText = "";
+	}
+
+	onClickBack() {
+		// this.viewFileTitle = "";
+		// this.selectStructInfo = null;
+		// this.arrSelectStructAddr = [];
+		// this.selectStruct = null;
+		// this.isSelectAddress = false;
+		// this.monacoEditCtl.mapStruct = {};
+		// this.monacoEditCtl.editor.updateOptions({ readOnly: true });
+		// this.monacoEditCtl.setValue("");
+		// this.arrAddress = [];
+		// this.originText = "";
+		this.unselectParser();
 
 		this.isEditTree = false;
 		this.confirmDeleteIdx = -1;
@@ -781,6 +833,10 @@ export default class Home extends Vue {
 	// }
 
 	onClickStruct(it:FileStruct) {
+		if(this.isEditTree) {
+			return;
+		}
+
 		this.selectStruct = null;
 		this.isSelectAddress = false;
 
@@ -1013,6 +1069,7 @@ export default class Home extends Vue {
 	}
 
 	onClickMenuEdit() {
+		this.unselectStruct();
 		this.isEditTree=!this.isEditTree;
 		this.confirmDeleteIdx = -1;
 	}
@@ -1055,6 +1112,62 @@ export default class Home extends Vue {
 		}
 		this.needSaveToServer = true;
 		this.confirmDeleteIdx = -1;
+	}
+
+	onDowmMenuItemDrag(idx, evt) {
+		if(this.isDragMenu) {
+			return;
+		}
+		this.isDragMenu = true;
+		// this.dragDownY = evt.pageY;
+		this.dragIdx = idx;
+		this.dragNewIdx = idx;
+
+		if(!this.selectStructInfo) {
+			this.dragItemText = this.lstFileStruct[idx].name;
+		} else {
+			this.dragItemText = this.selectStructInfo.structs[idx].name;
+		}
+	}
+
+	onMousemoveMenuItem(idx, evt) {
+		if(!this.isDragMenu) {
+			return;
+		}
+
+		// var eleBox: HTMLDivElement = null;
+		var itemHeight = 30;
+		if(!this.selectStructInfo) {
+			// eleBox = this.$refs.treeParserBox as any;
+		} else {
+			// eleBox = this.$refs.treeStructBox as any;
+			itemHeight = 24;
+		}
+
+		var pos = ComUtil.getTargetMousePos(evt);
+		var newIdx = idx;
+		if(pos.y >= itemHeight/2) {
+			newIdx = idx + 1;
+		}
+		this.dragNewIdx = newIdx;
+		this.dragPointerStyle.top = newIdx * itemHeight + "px";
+		// console.info(pos);
+	}
+
+	// anoOnDocumentMousemove = (e)=>this.onDocumentMousemove(e);
+	// onDocumentMousemove(evt) {
+	// 	if(!this.isDragMenu) {
+	// 		return;
+	// 	}
+	// }
+
+	anoOnDocumentMouseup = (e)=>this.onDocumentMouseup(e);
+	onDocumentMouseup(evt) {
+		if(!this.isDragMenu) {
+			return;
+		}
+		this.isDragMenu = false;
+		this.dragIdx = -1;
 	}
 
 }

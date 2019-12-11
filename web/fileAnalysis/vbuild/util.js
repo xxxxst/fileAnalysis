@@ -18,7 +18,7 @@ var util = {
 				template: tmplName,
 				inject: true,
 				cdn: false,
-				build: false,
+				release: false,
 				chunks: ['manifest', 'vendors', entName]
 			}
 		}
@@ -33,7 +33,7 @@ var util = {
 				template: tmplName,
 				inject: true,
 				cdn: true,
-				build: true,
+				release: true,
 				minify: {
 					removeComments: true,
 					collapseWhitespace: true,

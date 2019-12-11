@@ -6,6 +6,8 @@ interface $Rst {
 	resize(cb:any):$Rst;
 	on(type:string, cb:any):$Rst;
 	off(type:string, cb:any):$Rst;
+	innerWidth():number;
+	innerHeight():number;
 	width():number;
 	height():number;
 	append(ele:any):any;

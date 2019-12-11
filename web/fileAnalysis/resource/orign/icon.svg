@@ -17,7 +17,7 @@
    id="svg8"
    inkscape:version="0.92.2 (5c3e80d, 2017-08-06)"
    sodipodi:docname="icon.svg"
-   inkscape:export-filename="E:\00workself\web\project\fileAnalysis\web\fileAnalysis\static\image\delete.png"
+   inkscape:export-filename="E:\00workself\web\project\fileAnalysis\web\fileAnalysis\static\image\dragPointer.png"
    inkscape:export-xdpi="48"
    inkscape:export-ydpi="48">
   <defs
@@ -29,14 +29,19 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="4"
-     inkscape:cx="45.632987"
-     inkscape:cy="55.389722"
+     inkscape:zoom="1.4142136"
+     inkscape:cx="164.89041"
+     inkscape:cy="19.754212"
      inkscape:document-units="px"
-     inkscape:current-layer="layer5"
+     inkscape:current-layer="layer7"
      inkscape:showpageshadow="false"
      showgrid="false"
-     inkscape:snap-nodes="false" />
+     inkscape:snap-nodes="false"
+     inkscape:object-nodes="true">
+    <inkscape:grid
+       type="xygrid"
+       id="grid864" />
+  </sodipodi:namedview>
   <metadata
      id="metadata5">
     <rdf:RDF>
@@ -45,10 +50,25 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title />
+        <dc:title></dc:title>
       </cc:Work>
     </rdf:RDF>
   </metadata>
+  <g
+     inkscape:groupmode="layer"
+     id="layer8"
+     inkscape:label="back"
+     style="display:none"
+     sodipodi:insensitive="true">
+    <rect
+       style="opacity:1;fill:#a3a3a3;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:0.25;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;paint-order:stroke fill markers"
+       id="rect860"
+       width="21.89864"
+       height="4"
+       x="0"
+       y="0"
+       ry="1.2065514e-007" />
+  </g>
   <g
      inkscape:label="add"
      inkscape:groupmode="layer"
@@ -170,7 +190,8 @@
   <g
      inkscape:groupmode="layer"
      id="layer5"
-     inkscape:label="delete">
+     inkscape:label="delete"
+     style="display:none">
     <path
        style="fill:none;stroke:#ad0000;stroke-width:0.24999999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
        d="m 1.6254292,0.33868653 c 0.121687,-0.0652386 0.7560002,-0.0481361 0.8568681,0.0102736 0.1033988,0.21342898 0.1208677,0.47615117 0.09483,0.63000555 l -1.066637,-0.001856 c 4.96e-4,-0.16832465 0.012046,-0.4048143 0.1149389,-0.63842315 z"
@@ -201,5 +222,63 @@
        id="path902"
        inkscape:connector-curvature="0"
        sodipodi:nodetypes="cc" />
+  </g>
+  <g
+     inkscape:groupmode="layer"
+     id="layer6"
+     inkscape:label="drag"
+     style="display:none">
+    <g
+       id="g844"
+       transform="translate(-0.0467426,-0.0331456)">
+      <path
+         sodipodi:nodetypes="ccc"
+         inkscape:connector-curvature="0"
+         id="path838"
+         d="M 0.64081554,1.9669389 1.6849029,0.93942435 V 3.7236573"
+         style="fill:none;stroke:#848484;stroke-width:0.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
+      <use
+         height="100%"
+         width="100%"
+         transform="rotate(180,2.0467426,2.0331456)"
+         id="use840"
+         xlink:href="#path838"
+         y="0"
+         x="0" />
+    </g>
+  </g>
+  <g
+     inkscape:groupmode="layer"
+     id="layer7"
+     inkscape:label="dragPointer">
+    <use
+       x="0"
+       y="0"
+       xlink:href="#path857"
+       id="use862"
+       transform="matrix(-1,0,0,1,20.750266,-8.841e-4)"
+       width="100%"
+       height="100%" />
+    <path
+       style="fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:0.0625px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="M 0.87531056,1.4890382 0.87538168,2.5111845 1.4065161,2.0008841 Z"
+       id="path857"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cccc" />
+    <path
+       style="fill:none;stroke:#4acae9;stroke-width:0.25;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       d="M 0.96386719,1.4013672 1.5625,2 19.187315,1.9997559 19.786395,1.4000196"
+       id="path847"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cccc" />
+    <use
+       x="0"
+       y="0"
+       xlink:href="#path847"
+       id="use849"
+       transform="matrix(1,0,0,-1,0,4)"
+       width="100%"
+       height="100%"
+       style="stroke-width:0.37951559" />
   </g>
 </svg>

@@ -14,7 +14,7 @@ export default App;
 	body { font-size: 16px; background-color: #ffffff; }
 	// div,input,textarea,ul,li,label,a,table,tr,td { box-sizing: border-box; }
 	// div { line-height: 0; }
-	* { margin: 0px; padding: 0px; box-sizing: border-box; outline: none; }
+	* { margin: 0px; padding: 0px; box-sizing: border-box; outline: none; background-size: 100% 100%; background-repeat: no-repeat; }
 	// input { outline: none; }
 	table { border-collapse: collapse; table-layout:fixed; }
 	// tr,td { padding: 0px; }

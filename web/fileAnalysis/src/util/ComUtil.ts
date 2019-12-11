@@ -281,4 +281,64 @@ export default class ComUtil {
 			});
 		});
 	}
+
+	static async sleep(time) {
+		return new Promise((rsv)=> {
+			setTimeout(()=> {
+				rsv();
+			}, time);
+		});
+	}
+
+	static async waitElementLoaded(_ele, timeout=1000) {
+		var ele = _ele as HTMLElement;
+		var waitTime = 0;
+		var isLoaded = function(time) {
+			waitTime += time;
+			if(timeout >= 0) {
+				if(waitTime >= timeout) {
+					return true;
+				}
+			}
+			return (ele.offsetWidth > 0 || ele.offsetHeight > 0);
+		}
+		if(isLoaded(0)) { return; }
+
+		await this.sleep(50);
+		if(isLoaded(50)) { return; }
+
+		await this.sleep(100);
+		if(isLoaded(50)) { return; }
+
+		await this.sleep(250);
+		if(isLoaded(300)) { return; }
+
+		await this.sleep(250);
+		if(isLoaded(300)) { return; }
+
+		await this.sleep(250);
+	}
+
+	static getElementAbsolutePos(ele:HTMLElement) {
+		var rst = { x: 0, y: 0 };
+		while (ele && !isNaN(ele.offsetLeft) && !isNaN(ele.offsetTop)) {
+			rst.x += ele.offsetLeft - ele.scrollLeft;
+			rst.y += ele.offsetTop - ele.scrollTop;
+			ele = ele.offsetParent as any;
+		}
+		return rst;
+	}
+
+	static getTargetMousePos(evt) {
+		var rst = { x: evt.offsetX, y: evt.offsetY };
+		for(var i = 0; i < evt.path.length; ++i) {
+			if(evt.path[i] == evt.currentTarget) {
+				return rst;
+			}
+			rst.x -= evt.path[i].offsetLeft;
+			rst.y -= evt.path[i].offsetTop;
+		}
+		return rst;
+	}
+
 }
