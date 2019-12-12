@@ -14,6 +14,7 @@ export default class MainModel{
 	// serverUrl:string = "/server/";
 	serverUrl = "/server/";
 	static = "1";
+	defaultData = "";
 
 	isDebug = false;
 

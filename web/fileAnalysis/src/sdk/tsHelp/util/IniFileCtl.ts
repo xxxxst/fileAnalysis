@@ -7,13 +7,14 @@ export default class IniFileCtl {
 
 		//success
 		var arrData = strData.split("\r\n");
+		var reg = /^\s*([^=]*?)\s*=\s*(.*)\s*$/;
 		for (var i = 0; i < arrData.length; ++i) {
-			var arrOne = arrData[i].split("=");
-			if (arrOne.length != 2) {
+			var tmp = reg.exec(arrData[i]);
+			if(!tmp || tmp[1] == "") {
 				continue;
 			}
-			var key = arrOne[0].trim().replace(/^"(.*?)"$/, "$1");
-			var val = arrOne[1].trim().replace(/^"(.*?)"$/, "$1");
+			var key = tmp[1];
+			var val = tmp[2].replace(/^["'](.*?)["']$/, "$1").trim();
 
 			mapRst[key] = val;
 		}

@@ -23,6 +23,7 @@ import HexViewFill from 'src/components/hexViewFill/HexViewFill.vue';
 import IHexViewFill from 'src/components/hexViewFill/HexViewFillTs';
 import StructFormatCtl from 'src/control/StructFormatCtl';
 import ComUtil from 'src/util/ComUtil';
+import MonacoHelpCtl from 'src/control/MonacoHelpCtl';
 
 @Component({ components: { HexView, HexViewFill, SimpleMonacoEditor, MapPreview }})
 export default class Home extends Vue {
@@ -35,6 +36,7 @@ export default class Home extends Vue {
 	isStaticMode = true;
 	isShowStructView = false;
 	isEditTree = false;
+	isShowHelp = false;
 	isSelectAddress = false;
 	hexStartRow = 0;
 	confirmDeleteIdx = -1;
@@ -45,19 +47,14 @@ export default class Home extends Vue {
 
 	selectStructInfo: FileStructInfo = null;
 	arrSelectStructAddr: StructAddressMd[] = [];
-	// selectRootStruct: RootFileStruct = null;
 	selectStruct: FileStruct = null;
 	viewFileTitle = "";
-
-	// colMinLength = [0, 0, 0, 0];
 
 	originText = "";
 	editText = "";
 	needSave = false;
 	needSaveToServer = false;
 	isDoSaveToServer = false;
-	// changeMonacoTextInner = false;
-	// mapMonacoComplation:Record<string, string> = {};
 	mapTypeLen: Record<string, number> = {};
 	
 	@VIgnore()
@@ -65,6 +62,9 @@ export default class Home extends Vue {
 
 	@VIgnore()
 	monacoEditCtl: MonacoEditrCtl = new MonacoEditrCtl();
+
+	@VIgnore()
+	monacoHelpCtl: MonacoHelpCtl = new MonacoHelpCtl();
 
 	isDragMenu = false;
 	dragIdx = -1;
@@ -74,28 +74,12 @@ export default class Home extends Vue {
 	};
 	dragNewIdx = -1;
 
-	// @VIgnore()
-	// textMd: TextMd = null;
-
 	log = "";
 
 	@Watch("winSize")
 	onSizeChanged(){
-		// var smEditor = this.$refs.smEditor as ISimpleMonacoEditor;
-		// if(smEditor) {
-		// 	smEditor.layout();
-		// }
-
 		this.monacoEditCtl.resize();
-		// if(this.editor == null){
-		// 	return;
-		// }
-
-		// setTimeout(()=>{
-		// 	// var ele:any = this.$refs.textEdit;
-		// 	// console.info("aaa", $(ele).width(), $(ele).height());
-		// 	this.editor.layout();
-		// }, 1);
+		this.monacoHelpCtl.resize();
 	}
 
 	created() {
@@ -135,7 +119,6 @@ export default class Home extends Vue {
 		this.monacoEditCtl.onUpdateText = (e)=>this.onUpdateText(e);
 		this.monacoEditCtl.onSave = ()=>this.onRefreshData();
 		this.monacoEditCtl.initGlobalMonacoEditor();
-		// this.initGlobalMonacoEditor();
 
 		this.loadData();
 	}
@@ -152,19 +135,21 @@ export default class Home extends Vue {
 		document.addEventListener("mousewheel", this.anoOnMousewheel, { passive: false });
 		// document.addEventListener("mousemove", this.anoOnDocumentMousemove, { passive: false });
 		document.addEventListener("mouseup", this.anoOnDocumentMouseup, { passive: false });
-
-		// this.initMonacoEditor();
-
-		// var eleFile = this.$refs.fileData as HTMLInputElement;
-		// eleFile.addEventListener("change", (e)=>this.onLoadData(e));
 		
 		var ele:any = this.$refs.textEdit;
 		this.monacoEditCtl.ele = ele;
 		this.monacoEditCtl.init();
 
+		this.monacoHelpCtl.ele = this.$refs.textHelp as any;
+		this.monacoHelpCtl.init();
+
 		ComUtil.waitElementLoaded(this.$refs.textEdit).then(()=> {
 			this.onSizeChanged();
 		});
+	}
+
+	initHelpView() {
+
 	}
 
 	destroyed() {
@@ -188,8 +173,18 @@ export default class Home extends Vue {
 		evt.preventDefault();
 	}
 
+	loadDefaultData() {
+		try {
+			var obj = JSON.parse(MainModel.ins.defaultData);
+			if(typeof(obj) == "object") {
+				this.formatOriginData(obj);
+			}
+		} catch (ex) { }
+	}
+
 	async loadData() {
 		if(this.isStaticMode) {
+			this.loadDefaultData();
 			this.isInited = true;
 			return;
 		}
@@ -199,32 +194,17 @@ export default class Home extends Vue {
 			var res = await axios.get(url);
 			if(typeof(res.data) == "object") {
 				this.formatOriginData(res.data);
-				// var rst = [];
-				// for(var i = 0; i < res.data.length; ++i) {
-				// 	var tmp = new FileStructInfo();
-				// 	tmp.name = res.data[i].name;
-				// 	tmp.suffix = res.data[i].suffix;
-				// 	tmp.address = res.data[i].address;
-				// 	tmp.editAddress = res.data[i].address;
-				// 	for(var j = 0; j < res.data[i].structs.length; ++j) {
-				// 		var struct = res.data[i].structs[j];
-				// 		var tmp2 = StructFormatCtl.textToFileStruct(struct.textCache);
-				// 		if(tmp2) {
-				// 			tmp.structs.push(tmp2);
-				// 		}
-				// 	}
-				// 	rst.push(tmp);
-				// }
-				// this.lstFileStruct = rst;
 			}
-			// console.info(rst.data);
-		} catch(ex) {}
+		} catch(ex) {
+			this.isStaticMode = true;
+			this.loadDefaultData();
+		}
 
 		this.isInited = true;
-
-		// this.$nextTick(()=> {
-		// 	this.onSizeChanged();
-		// });
+		
+		this.$nextTick(()=>{
+			this.onSizeChanged();
+		});
 	}
 
 	formatOriginData(data) {
@@ -294,9 +274,6 @@ export default class Home extends Vue {
 	}
 
 	onUpdateText(evt) {
-		// if(this.changeMonacoTextInner) {
-		// 	return;
-		// }
 		var str = this.monacoEditCtl.getValue();
 		if(this.isSelectAddress && this.selectStructInfo) {
 			this.selectStructInfo.editAddress = str;
@@ -308,106 +285,8 @@ export default class Home extends Vue {
 			this.needSave = true;
 			this.needSaveToServer = true;
 		}
-		// var str = this.monacoModel.getValue();
 		this.editText = str;
-
-		// if(this.changeMonacoTextInner) {
-		// 	return;
-		// }
-
-		// if(evt.isRedoing || evt.isUndoing) {
-		// 	return;
-		// }
-
-		// try {
-		// 	var text = evt.changes[0].text;
-		// 	if(text != "\t") {
-		// 		return;
-		// 	}
-		// 	var range: monaco.Range = evt.changes[0].range;
-		// 	var pos = range.startColumn;
-		// 	var line = this.monacoModel.getLineContent(range.startLineNumber);
-
-		// 	if(/^(\[)|(address)/.test(line)) {
-		// 		return;
-		// 	}
-		// 	if(this.checkIsString(line, pos - 1)) {
-		// 		return;
-		// 	}
-
-		// 	var arr = str.split("\r\n");
-		// 	if(range.startLineNumber > arr.length) {
-		// 		return;
-		// 	}
-
-		// 	var idx = this.calcTextLen(line.substr(0, pos-1) + "\t");
-		// 	var newInsert = "\t";
-		// 	var totalLen = 0;
-		// 	for(var i = 0; i < this.colMinLength.length - 1; ++i) {
-		// 		totalLen += this.colMinLength[i];
-		// 		if(idx == totalLen) {
-		// 			if(pos == line.length) {
-		// 				if(i == 1) {
-		// 					newInsert += "= ";
-		// 				} else if(i == 2) {
-		// 					newInsert += ";// ";
-		// 				}
-		// 			}
-		// 			break;
-		// 		}
-
-		// 		if(idx < totalLen) {
-		// 			var count = Math.ceil((totalLen - idx) / 4);
-		// 			if(isNaN(count)) { count = 0; }
-		// 			if(count > 200) { count = 200; }
-		// 			var tmp = "";
-		// 			for(var j = 0; j < count; ++j) {
-		// 				tmp += "\t";
-		// 			}
-		// 			// console.info("aaa", i);
-		// 			if(pos == line.length) {
-		// 				if(i == 1) {
-		// 					tmp += "= ";
-		// 				} else if(i == 2) {
-		// 					tmp += ";// ";
-		// 				}
-		// 			}
-		// 			// console.info(i, tmp);
-		// 			newInsert += tmp;
-					
-		// 			// console.info("aaa", tmp, "--");
-		// 			break;
-		// 		}
-		// 	}
-
-		// 	var insertRange = new monaco.Range(range.startLineNumber, range.startColumn, range.startLineNumber, range.startColumn+1);
-		// 	var id = { major: 1, minor: 1 }; 
-		// 	var op = {identifier: id, range: insertRange, text: newInsert, forceMoveMarkers: false};
-		// 	this.changeMonacoTextInner = true;
-		// 	this.editor.executeEdits("", [op]);
-		// 	// this.editor.trigger('keyboard', 'type', {text: tmp});
-		// 	this.changeMonacoTextInner = false;
-
-		// 	setTimeout(()=>{
-		// 		this.editor.setPosition({
-		// 			lineNumber:range.startLineNumber, 
-		// 			column: pos + newInsert.length
-		// 		});
-		// 	}, 0);
-
-		// } catch(ex) { }
 	}
-
-	// findInsertCol(line, col) {
-	// 	var idx = 0;
-	// 	var totalLen = 0;
-	// 	for(var i = 0; i < this.colMinLength.length; ++i) {
-	// 		totalLen += this.colMinLength[i];
-	// 		if(col <= totalLen) {
-
-	// 		}
-	// 	}
-	// }
 
 	anoOnKeydown = evt=>this.onKeydown(evt);
 	onKeydown(evt) {
@@ -415,11 +294,18 @@ export default class Home extends Vue {
 		if ((evt.ctrlKey === true || evt.metaKey) && evt.keyCode==83) {
 			evt.preventDefault();
 		}
+
+		// esc && drag menu item
+		if(evt.keyCode == 27 && this.isDragMenu) {
+			this.isDragMenu = false;
+			this.dragIdx = -1;
+			this.dragNewIdx = -1;
+		}
 	}
 
 	anoOnKeyup = evt=>this.onKeyup(evt);
 	onKeyup(evt) {
-		// console.info(evt);
+
 	}
 
 	anoOnMousewheel = (e)=>this.onMousewheel(e);
@@ -467,22 +353,6 @@ export default class Home extends Vue {
 		}
 
 		this.arrAddress = StructFormatCtl.textToAddress(md.editAddress);
-
-		// var rst = [];
-		// var arr = md.address.replace(/\r\n/g, "\n").split("\n");
-		// for(var i = 0; i < arr.length; ++i) {
-		// 	var idx = arr[i].indexOf("	");
-		// 	if(idx < 0) {
-		// 		continue;
-		// 	}
-		// 	var tmp = new AddressMd();
-		// 	tmp.name = arr[i].substr(0, idx);
-		// 	tmp.address = arr[i].substr(idx+1);
-
-		// 	rst.push(tmp);
-		// }
-
-		// this.arrAddress = rst;
 
 		if(this.fileCache) {
 			this.calcAddress();
@@ -746,16 +616,6 @@ export default class Home extends Vue {
 	}
 
 	onClickBack() {
-		// this.viewFileTitle = "";
-		// this.selectStructInfo = null;
-		// this.arrSelectStructAddr = [];
-		// this.selectStruct = null;
-		// this.isSelectAddress = false;
-		// this.monacoEditCtl.mapStruct = {};
-		// this.monacoEditCtl.editor.updateOptions({ readOnly: true });
-		// this.monacoEditCtl.setValue("");
-		// this.arrAddress = [];
-		// this.originText = "";
 		this.unselectParser();
 
 		this.isEditTree = false;
@@ -797,44 +657,15 @@ export default class Home extends Vue {
 		md.textCache = "";
 		this.selectStructInfo.structs.push(md);
 
-		// var tmp = new StructAddressMd();
-		// tmp.data = md;
-		// this.arrSelectStructAddr.push(tmp);
-
 		this.onClickStruct(md);
 	}
-
-	// onClickShowHideStructView() {
-	// 	this.isShowStructView = !this.isShowStructView;
-	// 	// this.selectRootStruct = null;
-	// 	this.selectStruct = null;
-	// 	// this.monacoModel.setValue("");
-	// 	this.monacoEditCtl.editor.updateOptions({ readOnly: true });
-	// 	this.monacoEditCtl.setValue("");
-	// 	// this.editor.updateOptions({ readOnly: true });
-	// 	// this.setMonacoTextInner("");
-	// 	this.originText = "";
-	// 	// this.colMinLength = [0, 0, 0, 0];
-	// }
-
-	// onClickRootStruct(it:RootFileStruct) {
-	// 	var map = this.monacoEditCtl.mapStruct;
-	// 	if(!(it.name in map)) {
-	// 		return;
-	// 	}
-
-	// 	this.selectRootStruct = it;
-	// 	this.selectStruct = map[it.name];
-	// 	this.selectStructName = this.selectStruct.name;
-	// 	this.monacoEditCtl.setReadonly(false);
-	// 	// this.editor.updateOptions({ readOnly: false });
-
-	// 	this.updateText();
-	// }
 
 	onClickStruct(it:FileStruct) {
 		if(this.isEditTree) {
 			return;
+		}
+		if(this.isShowHelp) {
+			this.monacoHelpCtl.setType("ana");
 		}
 
 		this.selectStruct = null;
@@ -850,8 +681,6 @@ export default class Home extends Vue {
 
 		this.isEditTree = false;
 		this.confirmDeleteIdx = -1;
-
-		// this.updateText();
 	}
 
 	updateText() {
@@ -859,35 +688,18 @@ export default class Home extends Vue {
 			return;
 		}
 		var md = this.selectStruct;
-		// this.originText = this.monacoEditCtl.setFileStruct(md);
 		this.originText = md.textCache;
 		this.monacoEditCtl.setValue(md.editCache);
-
-		// var attrs = this.selectStruct.attrs;
-
-		// this.calcColMinLength();
-
-		// var str = "";
-		// var endl = "\r\n";
-		// str += `[${md.name} | ${md.desc}]` + endl;
-		// str += endl;
-		// if(this.selectRootStruct) {
-		// 	str += `address=${this.selectRootStruct.address}` + endl;
-		// 	str += endl;
-		// }
-		// for(var i = 0; i < attrs.length; ++i) {
-		// 	var tmp = this.formatRowStr(attrs[i]);
-		// 	str += tmp + endl;
-		// }
-
-		// this.originText = str;
-		// this.setMonacoTextInner(str);
 	}
 
 	onClickAddressBtn() {
 		if(!this.selectStructInfo) {
 			return;
 		}
+		if(this.isShowHelp) {
+			this.monacoHelpCtl.setType("addr");
+		}
+
 		this.isSelectAddress = false;
 		this.selectStruct = null;
 		this.monacoEditCtl.setReadonly(false);
@@ -897,34 +709,14 @@ export default class Home extends Vue {
 		this.isSelectAddress = true;
 		this.viewFileTitle = "Address";
 		
-		// this.monacoEditCtl.setValue(this.selectStructInfo.address);
 		this.originText = this.selectStructInfo.address;
 	}
 
-	// setEditorInner(text) {
-	// 	this.changeMonacoTextInner = true;
-	// 	this.monacoEditCtl.setValue(text);
-	// 	this.changeMonacoTextInner = false;
-	// }
-
 	onRefreshData() {
-		// if(!this.selectStructInfo) {
-		// 	return;
-		// }
 		if(!this.needSave) {
 			return;
 		}
 		this.needSave = false;
-		// if(this.isDoSaveToServer) {
-		// 	return;
-		// }
-		// this.needSave = false;
-		// if(this.selectStructInfo.address != this.selectStructInfo.editAddress) {
-		// 	this.selectStructInfo.address = this.selectStructInfo.editAddress;
-		// 	if(this.isSelectAddress) {
-		// 		this.originText = this.selectStructInfo.address;
-		// 	}
-		// }
 		for(var i = 0; i < this.lstFileStruct.length; ++i) {
 			var md = this.lstFileStruct[i];
 			md.address = md.editAddress;
@@ -949,16 +741,12 @@ export default class Home extends Vue {
 					this.selectStruct = tmp;
 					this.viewFileTitle = tmp.name;
 					this.originText = tmp.textCache;
-					// delete this.monacoEditCtl.mapStruct[it.name];
-					// this.monacoEditCtl.mapStruct[tmp.name] = tmp;
-					// this.onClickStruct(tmp);
 				}
 			}
 		}
-		this.onClickParser(this.selectStructInfo);
-		// this.formatAddress();
-
-		// this.saveToServer();
+		if(this.selectStructInfo) {
+			this.onClickParser(this.selectStructInfo);
+		}
 	}
 
 	onLoadData(evt) {
@@ -1018,24 +806,6 @@ export default class Home extends Vue {
 	}
 
 	async saveToServer() {
-		// var data = [];
-		// for(var i = 0; i < this.lstFileStruct.length; ++i) {
-		// 	var it = this.lstFileStruct[i];
-		// 	var tmp: any = {};
-		// 	tmp.name = it.name;
-		// 	tmp.suffix = it.suffix;
-		// 	tmp.address = it.address;
-		// 	tmp.structs = [];
-		// 	for(var j = 0; j < it.structs.length; ++j) {
-		// 		var it2 = it.structs[j];
-		// 		tmp.structs.push({
-		// 			name: it2.name,
-		// 			desc: it2.desc,
-		// 			textCache: it2.textCache,
-		// 		});
-		// 	}
-		// 	data.push(tmp);
-		// }
 		var data = this.getSaveData();
 
 		// save to server
@@ -1099,22 +869,16 @@ export default class Home extends Vue {
 				this.originText = "";
 				this.editText = "";
 			}
-			// var name = this.selectStructInfo.structs[this.confirmDeleteIdx].name;
 			this.selectStructInfo.structs.splice(this.confirmDeleteIdx, 1);
-			// this.arrSelectStructAddr.splice(this.confirmDeleteIdx, 1);
-			// for(var i = this.arrAddress.length - 1; i >= 0; --i) {
-			// 	if(this.arrAddress[i].name == name) {
-			// 		this.arrAddress.splice(i, 1);
-			// 	}
-			// }
-			// // this.arrAddress = StructFormatCtl.textToAddress(this.selectStructInfo.editAddress);
-			// delete this.monacoEditCtl.mapStruct[this.selectStruct.name];
 		}
 		this.needSaveToServer = true;
 		this.confirmDeleteIdx = -1;
 	}
 
 	onDowmMenuItemDrag(idx, evt) {
+		if(!this.isEditTree) {
+			return;
+		}
 		if(this.isDragMenu) {
 			return;
 		}
@@ -1136,11 +900,8 @@ export default class Home extends Vue {
 		}
 
 		// var eleBox: HTMLDivElement = null;
-		var itemHeight = 30;
-		if(!this.selectStructInfo) {
-			// eleBox = this.$refs.treeParserBox as any;
-		} else {
-			// eleBox = this.$refs.treeStructBox as any;
+		var itemHeight = 36;
+		if(this.selectStructInfo) {
 			itemHeight = 24;
 		}
 
@@ -1151,23 +912,71 @@ export default class Home extends Vue {
 		}
 		this.dragNewIdx = newIdx;
 		this.dragPointerStyle.top = newIdx * itemHeight + "px";
-		// console.info(pos);
 	}
 
-	// anoOnDocumentMousemove = (e)=>this.onDocumentMousemove(e);
-	// onDocumentMousemove(evt) {
-	// 	if(!this.isDragMenu) {
-	// 		return;
-	// 	}
-	// }
+	listReInsert(lst:any[], idx, newIdx) {
+		if(idx == newIdx || idx == newIdx-1) {
+			return;
+		}
+
+		var tmp = lst[idx];
+		lst.splice(idx, 1);
+
+		if (idx < newIdx) {
+			lst.splice(newIdx - 1, 0, tmp);
+		} else {
+			lst.splice(newIdx, 0, tmp);
+		}
+	}
 
 	anoOnDocumentMouseup = (e)=>this.onDocumentMouseup(e);
 	onDocumentMouseup(evt) {
 		if(!this.isDragMenu) {
 			return;
 		}
+
+		var idx = this.dragIdx;
+		var newIdx = this.dragNewIdx;
+
 		this.isDragMenu = false;
 		this.dragIdx = -1;
+		this.dragNewIdx = -1;
+
+		if(idx == newIdx || idx == (newIdx-1) || idx < 0 || newIdx < 0) {
+			return;
+		}
+		if(idx == newIdx || idx == newIdx-1) {
+			return;
+		}
+
+		if(!this.selectStructInfo) {
+			this.listReInsert(this.lstFileStruct, idx, newIdx);
+		} else {
+			this.listReInsert(this.selectStructInfo.structs, idx, newIdx);
+			this.listReInsert(this.arrSelectStructAddr, idx, newIdx);
+		}
+		this.needSave = true;
+		this.needSaveToServer = true;
+
+	}
+
+	onClickHelp() {
+		this.isShowHelp = !this.isShowHelp;
+
+		this.$nextTick(()=>{
+			this.monacoEditCtl.resize();
+			this.monacoHelpCtl.resize();
+		});
+
+		if(!this.isShowHelp) {
+			return;
+		}
+
+		if(this.isSelectAddress) {
+			this.monacoHelpCtl.setType("addr");
+		} else {
+			this.monacoHelpCtl.setType("ana");
+		}
 	}
 
 }

@@ -20,16 +20,20 @@
 			</div>
 		</div>
 		<div class="content" :class="{'content-edit':isEditTree}" ref="treeParserBox">
-			<div class="item" v-for="(it,idx) in lstFileStruct" :key="idx">
+			<div class="item" v-for="(it,idx) in lstFileStruct" :key="idx" @mousemove="onMousemoveMenuItem(idx, $event)">
 				<div class="lbl" @click="onClickParser(it)">{{it.name}}</div>
-				<div class="input-box" v-show="isEditTree">
+				<div class="input-box" v-show="isEditTree" :class="{'select':(isDragMenu&&idx==dragIdx)}">
 					<input type="text" :ref="'muParserInput_' + idx" v-model="it.name" v-noSpell @change="onChangeParserName()" @keyup.enter="onEnterParserName()">
 				</div>
 				<div class="ctl-box" v-show="isEditTree">
 					<div class="ok-box" v-if="idx==confirmDeleteIdx" @click="onClickMenuItemDeleteSure()">Del</div>
 					<img v-noDrag class="btn" src="static/image/delete.png" alt="" @click="onClickMenuItemDelete(idx)">
-					<img v-noDrag class="btn" src="static/image/drag.png" alt="">
+					<img v-noDrag class="btn" src="static/image/drag.png" alt="" @mousedown="onDowmMenuItemDrag(idx, $event)">
 				</div>
+			</div>
+			
+			<div class="drag-pointer" v-show="isDragMenu&&dragIdx!=dragNewIdx&&dragIdx!=dragNewIdx-1" ref="drag-pointer" :style="dragPointerStyle">
+				<img src="static/image/dragPointer.png" alt="">
 			</div>
 		</div>
 	</div>
@@ -51,7 +55,7 @@
 		</div>
 		<div class="content" :class="{'content-edit':isEditTree}" ref="treeStructBox">
 			<div class="item" v-for="(it,idx) in selectStructInfo.structs" :key="idx" :class="{'select':selectStruct===it||(isDragMenu&&idx==dragIdx)}" @mousemove="onMousemoveMenuItem(idx, $event)">
-				<div class="lbl" @click="onClickStruct(it)">{{it.name + (it.textCache != it.editCache ? ' *':'')}}</div>
+				<div class="lbl" @click="onClickStruct(it)" @mousedown="onDowmMenuItemDrag(idx, $event)">{{it.name + (it.textCache != it.editCache ? ' *':'')}}</div>
 				<div class="ctl-box" v-show="isEditTree">
 					<div class="ok-box" v-if="idx==confirmDeleteIdx" @click="onClickMenuItemDeleteSure()">Del</div>
 					<img v-noDrag class="btn" src="static/image/delete.png" alt="" @click="onClickMenuItemDelete(idx)">
@@ -59,13 +63,8 @@
 				</div>
 			</div>
 
-			<!-- <svg class="drag-pointer" xmlns="http://www.w3.org/2000/svg" version="1.1" width="100%" height="5">
-				<g :transform="'translate(0.5,0.5)'">
-					<polyline class="line" points="0%,0% 100%,0%"/>
-				</g>
-			</svg> -->
-			<div class="drag-pointer" v-show="isDragMenu&&dragIdx!=dragNewIdx" ref="drag-pointer" :style="dragPointerStyle">
-				<div class="lbl">{{dragItemText}}</div>
+			<div class="drag-pointer" v-show="isDragMenu&&dragIdx!=dragNewIdx&&dragIdx!=dragNewIdx-1" ref="drag-pointer" :style="dragPointerStyle">
+				<!-- <div class="lbl">{{dragItemText}}</div> -->
 				<img src="static/image/dragPointer.png" alt="">
 			</div>
 		</div>
@@ -89,11 +88,14 @@
 		<div class="title">
 			<div class="lbl">{{viewFileTitle + ((editText!=originText) ? ' *':'')}}</div>
 			<div class="btn-box">
-				<div class="btn" title="help">?</div>
+				<div class="btn" title="help" :class="{'select':isShowHelp}" @click="onClickHelp()">?</div>
 			</div>
 		</div>
-		<div class="content">
+		<div class="content" :class="{'content-help':isShowHelp}">
 			<div class="text-edit" ref="textEdit"/>
+		</div>
+		<div class="help-box" v-show="isShowHelp">
+			<div class="text-help" ref="textHelp"/>
 		</div>
 		<!-- <SimpleMonacoEditor class="text-edit" ref="smEditor"/> -->
 	</div>
@@ -124,7 +126,7 @@ export default ctl;
 .home {
 	position: absolute; width: 100%; height: 100%; top: 0; left: 0;
 	>.top-box {
-		height: 50px; width: 100%; border-bottom: 1px solid #acacac; @extend %ex-one-line; padding: 5px;
+		position: relative; height: 50px; width: 100%; background: #fff; border-bottom: 1px solid #acacac; @extend %ex-one-line; padding: 5px; z-index: 10;
 		>.item {
 			cursor: pointer; position: relative; display: inline-block; width: 80px; height: 40px; text-align: center; font-size: 12px; border: 1px solid #acacac; white-space: pre-wrap; vertical-align: top; margin-right: 4px; overflow: hidden;
 			>span { position: relative; display: inline-block; top: 50%; transform: translateY(-50%); line-height: 14px; }
@@ -136,25 +138,11 @@ export default ctl;
 		}
 	}
 
-	// >.center-box {
-	// 	position: absolute; top: 64px; left: 0; width: 100%; bottom: 327px+1px; background: #f0f;
-	// }
 	>.tree-box {
 		position: absolute; background: #fff; top: 50px; left: 0; width: 200px; bottom: 25px; border-right: 1px solid #acacac;
 		>.head {
 			position: relative; width: 100%; height: 30px; border-bottom: 1px solid #e2e2e2;
-			// >.row1 {
-			// 	position: relative; height: 28px; border-bottom: 1px solid #acacac;
-			// 	>.select-box {
-			// 		position: absolute; height: 100%; left: 0; right: 28px;
-			// 		>select { width: 100%; height: 100%; border: 0; background: transparent; }
-			// 	}
-			// 	>.right-box {
-			// 		position: absolute; display: inline-block; top: 0; right: 0;
-			// 		>.btn { cursor: pointer; width: 20px; height: 20px; margin-top: 4px; margin-right: 4px; }
-			// 	}
-			// }
-			// position: relative; height: 30px;
+
 			>.title { display: inline-block; height: 30px; line-height: 30px; vertical-align: top; font-size: 12px; margin-left: 2px; }
 			>.left-box,>.right-box {
 				display: inline-block;
@@ -201,20 +189,9 @@ export default ctl;
 		>.content-edit {
 			>.item {
 				@extend %ex-no-select; cursor: default;
-				// >.lbl:hover { background: transparent; }
+				>.lbl:hover { background: transparent; }
 			}
 		}
-		// >.content {
-		// 	>.item {
-				
-				
-		// 		>.ctl-box>.btn { margin-top: 10px; }
-		// 		&:hover { background: #e4e4e4; }
-		// 	}
-		// }
-		// >.tree-content {
-			
-		// }
 	}
 	>.tree-parser {
 		>.content>.item {
@@ -222,6 +199,7 @@ export default ctl;
 				position: absolute; left: 0; top: 0; right: 0; height: 100%; background: #fff; padding-left: 5px;
 				>input { width: 100%; height: 100%; background: transparent; border: 0; vertical-align: top; border-bottom: 1px solid #cfcfcf; }
 			}
+			.select { background: #e4e4e4; }
 		}
 	}
 	>.tree-struct {
@@ -231,6 +209,7 @@ export default ctl;
 				cursor: default; display: inline-block; height: 100%; padding: 0 6px; font-size: 12px; vertical-align: top;
 				&:hover { background: #e4e4e4; }
 			}
+			.select { background: #e4e4e4; }
 		}
 		>.content {
 			// >.root { height: 24px; line-height: 24px; padding-left: 5px; background: #f5f5f5; }
@@ -246,7 +225,7 @@ export default ctl;
 	}
 
 	>.map-box {
-		position: absolute; background: #fff; top: 50px; left: 200px; width: 658px; bottom: 345px; overflow: auto; @include scrollbar(4px);
+		position: absolute; background: #fff; top: 50px; left: 200px; width: 658px; bottom: 345px;
 	}
 
 	>.hex-box {
@@ -269,6 +248,11 @@ export default ctl;
 		>.content {
 			position: absolute; left: 0; top: 28px; bottom: 0; width: 100%;
 			.text-edit { width: 100%; height: 100%; overflow: hidden; }
+		}
+		>.content-help { bottom: 230px; }
+		>.help-box {
+			position: absolute; left: 0; bottom: 0; width: 100%; height: 230px; border-top: 1px solid #757575;
+			>div { width: 100%; height: 100%; }
 		}
 	}
 
