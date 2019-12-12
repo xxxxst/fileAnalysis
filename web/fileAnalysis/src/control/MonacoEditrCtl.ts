@@ -90,10 +90,10 @@ export default class MonacoEditrCtl {
 				// fontFamily: "微软雅黑",
 			});
 
-			var local = this;
-			this.editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KEY_S, function() {
-				local.onSave && local.onSave();
-			});
+			// var local = this;
+			// this.editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KEY_S, function() {
+			// 	local.onSave && local.onSave();
+			// });
 
 			// var md
 			// this.textMd = new TextMd();

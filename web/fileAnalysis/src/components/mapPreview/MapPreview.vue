@@ -33,7 +33,7 @@ export default ctl;
 			cursor: pointer; display: inline-block; width: 22px; height: 22px; line-height: 20px; vertical-align: top; margin-left: 5px; font-size: 12px; text-align: center; border: 1px solid #929292;
 			&:hover { border: 1px solid #5c5c5c; }
 		}
-		>.select { border: 1px solid #5c5c5c; }
+		>.select { border: 1px solid #5c5c5c; background: #f8f8f8; }
 	}
 	>.content {
 		position: relative; width: 100%; height: 100%; overflow: auto; @include scrollbar(4px);

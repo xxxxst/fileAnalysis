@@ -31,6 +31,7 @@ export default class Home extends Vue {
 	@SState("isDebug") isDebug:boolean;
 	
 	oldOncontextmenu: any = null;
+	oldWindowBeforeunload:any = null;
 
 	isInited = false;
 	isStaticMode = true;
@@ -125,6 +126,8 @@ export default class Home extends Vue {
 	
 	mounted() {
 		this.oldOncontextmenu = document.oncontextmenu;
+		this.oldWindowBeforeunload = window.onbeforeunload;
+		window.onbeforeunload = (e)=>this.onClosing(e);
 		window.addEventListener("dragover", this.anoOnDragover, false);
 		window.addEventListener("drag", this.onDrag, false);
 		document.oncontextmenu = function () { return false; };
@@ -154,6 +157,7 @@ export default class Home extends Vue {
 
 	destroyed() {
 		document.oncontextmenu = this.oldOncontextmenu;
+		window.onbeforeunload = this.oldWindowBeforeunload;
 		document.removeEventListener("keydown", this.anoOnKeydown);
 		document.removeEventListener("keydown", this.anoOnKeyup);
 		document.removeEventListener("mousewheel", this.anoOnMousewheel);
@@ -161,6 +165,17 @@ export default class Home extends Vue {
 		document.removeEventListener("mouseup", this.anoOnDocumentMouseup);
 		window.removeEventListener("dragover", this.anoOnDragover, false);
 		window.removeEventListener("drag", this.onDrag, false);
+	}
+
+	onClosing(evt) {
+		if(this.isDebug) {
+			return;
+		}
+		if(!this.needSaveToServer) {
+			return;
+		}
+
+		evt.returnValue=("sure to leave");
 	}
 
 	anoOnDragover = (e) =>this.onDragover(e);
@@ -225,6 +240,15 @@ export default class Home extends Vue {
 			rst.push(tmp);
 		}
 		this.lstFileStruct = rst;
+
+		this.unselectParser();
+
+		this.isEditTree = false;
+		this.confirmDeleteIdx = -1;
+		this.needSave = false;
+		if(this.isStaticMode) {
+			this.needSaveToServer = false;
+		}
 	}
 
 	getSaveData() {
@@ -289,7 +313,7 @@ export default class Home extends Vue {
 	}
 
 	anoOnKeydown = evt=>this.onKeydown(evt);
-	onKeydown(evt) {
+	onKeydown(evt:KeyboardEvent) {
 		// prevent ctrl+s event
 		if ((evt.ctrlKey === true || evt.metaKey) && evt.keyCode==83) {
 			evt.preventDefault();
@@ -300,6 +324,11 @@ export default class Home extends Vue {
 			this.isDragMenu = false;
 			this.dragIdx = -1;
 			this.dragNewIdx = -1;
+		}
+
+		// ctrl + s
+		if(evt.ctrlKey && evt.keyCode == 83) {
+			this.onRefreshData();
 		}
 	}
 
@@ -625,6 +654,7 @@ export default class Home extends Vue {
 	onClickAddParser() {
 		this.isEditTree = true;
 		this.confirmDeleteIdx = -1;
+		this.needSave = true;
 		this.needSaveToServer = true;
 
 		var md = new FileStructInfo();
@@ -755,6 +785,7 @@ export default class Home extends Vue {
 		if(!file) {
 			return;
 		}
+		ele.value = "";
 
 		this.loadDataFromLocal(file);
 	}
@@ -830,6 +861,7 @@ export default class Home extends Vue {
 	}
 
 	onChangeParserName() {
+		this.needSave = true;
 		this.needSaveToServer = true;
 	}
 
@@ -871,6 +903,7 @@ export default class Home extends Vue {
 			}
 			this.selectStructInfo.structs.splice(this.confirmDeleteIdx, 1);
 		}
+		this.needSave = true;
 		this.needSaveToServer = true;
 		this.confirmDeleteIdx = -1;
 	}
