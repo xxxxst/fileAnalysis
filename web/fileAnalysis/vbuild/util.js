@@ -104,8 +104,8 @@ exports.cssLoaders = function(options) {
 					sourceMap: options.sourceMap
 				})
 			});
-			loaders.push(cssLoaderRelative);
 		}
+		loaders.push(cssLoaderRelative);
 
 		// Extract CSS when that option is specified
 		// (which is the case during production build)

@@ -50,9 +50,6 @@
 			</table>
 		</div>
 
-		<!-- <div class="scrollbar">
-			<div class="btn"></div>
-		</div> -->
 		<HexViewScrollbar ref="slbVer" :model="slbMd"/>
 
 	</div>
@@ -68,14 +65,6 @@
 import ctl from "./HexViewTs";
 export default ctl;
 </script>
-
-<style>
-@font-face {
-	font-family: 'simsunspace';
-	src: url('/static/font/simsunspace.ttf') format('truetype');
-}
-</style>
-
 
 <style lang="scss">
 @import "/src/assets/css/style.scss";
@@ -97,34 +86,18 @@ export default ctl;
 					border-top: 1px solid #acacac;
 					>tr{
 						>td { padding: 0 4px; height: $rh; line-height: $rh - 1px; vertical-align: top; }
-						// >td:first-child { color: #973f93; padding-left: 4px; border-right: 1px solid #acacac; }
-						// >td:last-child { border-left: 1px solid #acacac; }
 						.gray { color: #b1b1b1; }
 					}
 				}
-				// .right { text-align: right; padding: 0 5px 0 0; }
-				// .col1 { border-right: 1px solid #acacac; }
-				// .col-last { border-left: 1px solid #acacac; }
 				.title { color: #973f93; padding-left: 4px; }
 			}
-			// >.data>tbody>tr>td { line-height: $rh - 1px; }
 			>.data>tbody>tr:first-child { height: 0; }
-			// >.data>tbody>tr:first-child>td { height: $rh - 1px; line-height: $rh - 2px; }
 			>.data>tbody>tr>td:first-child { text-align: right; }
 			>.select-hide-fill { pointer-events: none; position: absolute; top: 20px; right: 0; bottom: 1px; width: 8px; background: #fff; }
-			// &:first-child {
-			// 	>tbody>tr>td:first-child { color: #973f93; padding-left: 4px; border-right: 1px solid #acacac; }
-			// }
+
 		}
 		.table-box+.table-box { border-left: 0; }
 
-		// >.scrollbar {
-		// 	position: relative; display: inline-block; width: 10px; height: 308px; border: 1px solid #acacac; border-left: 0; @extend %ex-no-select;
-		// 	>.btn {
-		// 		position: absolute; width: 100%; height: 40px; left: 0; top: 0; border-radius: 5px; background: rgba(133, 133, 133, 0.6);
-		// 		&:hover { background: rgba(207, 207, 207, 0.87); }
-		// 	}
-		// }
 	}
 	>.no-file-box {
 		position: absolute; width: 100%; height: 100%; left: 0; top: 0; @extend %flex-center;
