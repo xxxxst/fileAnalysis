@@ -37,7 +37,7 @@
 		"monaco-editor-locales-plugin": "^0.0.2",
 		"monaco-editor-webpack-plugin": "1.7.0",
 		"node-notifier": "^5.4.0",
-		"node-sass": "4.11.0",
+		"node-sass": "4.14.1",
 		"optimize-css-assets-webpack-plugin": "^5.0.1",
 		"postcss-import": "^12.0.1",
 		"postcss-loader": "^3.0.0",
